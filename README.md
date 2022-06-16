@@ -21,10 +21,9 @@ Features
 * Can be used as a server application or embedded library.
 * Simple API based on JSON and HTTP.
 * Fast range scans and joins, read speed doesn't depend on database cardinality.
-* Fast data ingestion:
+* Fast data ingestion and compact inverted index for time-series lookup.
 * Queries are executed lazily. Query results are produced as long as client reads them.
 * Compression algorithm and input parsers are fuzz-tested on every code change.
-* Fast and compact inverted index for time-series lookup.
 
 
 
