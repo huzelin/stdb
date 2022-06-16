@@ -1,8 +1,8 @@
 /*!
  * \file basic.h
  */
-#ifndef FASTSTDB_COMMON_BASIC_H_
-#define FASTSTDB_COMMON_BASIC_H_
+#ifndef STDB_COMMON_BASIC_H_
+#define STDB_COMMON_BASIC_H_
 
 #include <stdint.h>
 
@@ -28,11 +28,11 @@ namespace stdb {
 #define LIMITS_MAX_TAGS 32
 #define MAX_THREADS 1024
 
-#define FASTSTDB_VERSION 101
+#define STDB_VERSION 101
 
-#define FASTSTDB_MIN_TIMESTAMP 0ull
-#define FASTSTDB_MAX_TIMESTAMP (~0ull)
-#define FASTSTDB_LIMITS_MAX_EVENT_LEN 4096
+#define STDB_MIN_TIMESTAMP 0ull
+#define STDB_MAX_TIMESTAMP (~0ull)
+#define STDB_LIMITS_MAX_EVENT_LEN 4096
 
 inline bool same_value(double a, double b) {
   union Bits {
@@ -60,4 +60,4 @@ inline std::string GetMetaVolumeDir() {
 }  // namespace common
 }  // namespace stdb
 
-#endif  // FASTSTDB_COMMON_BASIC_H_
+#endif  // STDB_COMMON_BASIC_H_

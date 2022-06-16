@@ -2,8 +2,8 @@
  * \file volume.h
  *
  */
-#ifndef FASTSTDB_STORAGE_VOLUME_H_
-#define FASTSTDB_STORAGE_VOLUME_H_
+#ifndef STDB_STORAGE_VOLUME_H_
+#define STDB_STORAGE_VOLUME_H_
 
 #include <cstdint>
 #include <future>
@@ -28,12 +28,12 @@ static const LogicAddr EMPTY_ADDR = std::numeric_limits<LogicAddr>::max();
 
 //! Address of the block inside volume (index of the block)
 typedef u32 BlockAddr;
-enum { FASTSTDB_BLOCK_SIZE = 4096 };
+enum { STDB_BLOCK_SIZE = 4096 };
 
 struct IOVecBlock {
   enum {
     NCOMPONENTS = 4,
-    COMPONENT_SIZE = FASTSTDB_BLOCK_SIZE / NCOMPONENTS,
+    COMPONENT_SIZE = STDB_BLOCK_SIZE / NCOMPONENTS,
   };
 
   std::vector<u8>  data_[NCOMPONENTS];
@@ -49,8 +49,8 @@ struct IOVecBlock {
 
   /**
    * @brief Create allocated IOVecBlock
-   * FASTSTDB_BLOCK_SIZE bytes will be allocated for the first storage
-   * component, pos_ will be set to FASTSTDB_BLOCK_SIZE.
+   * STDB_BLOCK_SIZE bytes will be allocated for the first storage
+   * component, pos_ will be set to STDB_BLOCK_SIZE.
    * The parameter value doesn't actually matter (used to distingwish between the c-tor's).
    * The block is not writable. Methods `get` and `get_raw` will work.
    */
@@ -297,4 +297,4 @@ class Volume {
 }  // namespace storage
 }  // namespace stdb
 
-#endif  // FASTSTDB_STORAGE_VOLUME_H_
+#endif  // STDB_STORAGE_VOLUME_H_

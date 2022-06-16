@@ -1,8 +1,8 @@
 /*!
  * \file queryplan.h
  */
-#ifndef FASTSTDB_QUERY_QUERY_PLAN_H_
-#define FASTSTDB_QUERY_QUERY_PLAN_H_
+#ifndef STDB_QUERY_QUERY_PLAN_H_
+#define STDB_QUERY_QUERY_PLAN_H_
 
 #include <memory>
 #include <vector>
@@ -48,4 +48,4 @@ struct QueryPlanExecutor {
 }  // namespace qp
 }  // namespaces stdb
 
-#endif  // FASTSTDB_QUERY_QUERY_PLAN_H_
+#endif  // STDB_QUERY_QUERY_PLAN_H_

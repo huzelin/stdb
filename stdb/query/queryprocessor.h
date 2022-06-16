@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef FASTSTDB_STORAGE_QUERY_PROCESSING_H_
-#define FASTSTDB_STORAGE_QUERY_PROCESSING_H_
+#ifndef STDB_STORAGE_QUERY_PROCESSING_H_
+#define STDB_STORAGE_QUERY_PROCESSING_H_
 
 #include <memory>
 
@@ -66,4 +66,4 @@ struct MetadataQueryProcessor : IStreamProcessor {
 }  // namespace qp
 }  // namespace stdb
 
-#endif  // FASTSTDB_STORAGE_QUERY_PROCESSING_H_
+#endif  // STDB_STORAGE_QUERY_PROCESSING_H_

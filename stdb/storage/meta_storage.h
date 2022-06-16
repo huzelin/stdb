@@ -1,8 +1,8 @@
 /*!
  * \file meta_storage.h
  */
-#ifndef FASTSTDB_STORAGE_META_STORAGE_H_
-#define FASTSTDB_STORAGE_META_STORAGE_H_
+#ifndef STDB_STORAGE_META_STORAGE_H_
+#define STDB_STORAGE_META_STORAGE_H_
 
 #include <memory>
 #include <mutex>
@@ -90,4 +90,4 @@ class MetaStorage : public VolumeRegistry {
 }  // namespace storage
 }  // namespace stdb
 
-#endif  // FASTSTDB_STORAGE_META_STORAGE_H_
+#endif  // STDB_STORAGE_META_STORAGE_H_

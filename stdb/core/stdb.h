@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef FASTSTDB_FASTSTDB_H_
-#define FASTSTDB_FASTSTDB_H_
+#ifndef STDB_STDB_H_
+#define STDB_STDB_H_
 
 #include <apr_errno.h>
 #include <stdint.h>
@@ -304,4 +304,4 @@ EXPORT int debug_report_dump(const char* path2db, const char* outfile);
 
 EXPORT int debug_recovery_report_dump(const char* path2db, const char* outfile);
 
-#endif  // FASTSTDB_FASTSTDB_H_
+#endif  // STDB_STDB_H_

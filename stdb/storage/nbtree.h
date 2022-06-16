@@ -69,8 +69,8 @@
  * count(), avg(), sum() etc.
  */
 
-#ifndef FASTSTDB_STORAGE_NBTREE_H_
-#define FASTSTDB_STORAGE_NBTREE_H_
+#ifndef STDB_STORAGE_NBTREE_H_
+#define STDB_STORAGE_NBTREE_H_
 
 #include <deque>
 
@@ -640,4 +640,4 @@ common::Status init_subtree_from_subtree(const IOVecSuperblock& node, SubtreeRef
 }  // namespace storage
 }  // namespace stdb
 
-#endif  // FASTSTDB_STORAGE_NBTREE_H_
+#endif  // STDB_STORAGE_NBTREE_H_

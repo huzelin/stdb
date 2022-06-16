@@ -1,8 +1,8 @@
 /*!
  * \file limiter.h 
  */
-#ifndef FASTSTDB_QUERY_QUERY_PROCESSING_LIMITER_H_
-#define FASTSTDB_QUERY_QUERY_PROCESSING_LIMITER_H_
+#ifndef STDB_QUERY_QUERY_PROCESSING_LIMITER_H_
+#define STDB_QUERY_QUERY_PROCESSING_LIMITER_H_
 
 #include <memory>
 
@@ -31,4 +31,4 @@ struct Limiter : Node {
 }  // namespace qp
 }  // namespace stdb
 
-#endif  // FASTSTDB_QUERY_QUERY_PROCESSING_LIMITER_H_
+#endif  // STDB_QUERY_QUERY_PROCESSING_LIMITER_H_

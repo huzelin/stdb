@@ -2,8 +2,8 @@
  * \file thread_local.h
  * \brief The thread local vars
 */
-#ifndef FASTSTDB_COMMON_THREAD_LOCAL_H_
-#define FASTSTDB_COMMON_THREAD_LOCAL_H_
+#ifndef STDB_COMMON_THREAD_LOCAL_H_
+#define STDB_COMMON_THREAD_LOCAL_H_
 
 #include <mutex>
 #include <memory>
@@ -59,4 +59,4 @@ class ThreadLocalStore {
 }  // namespace common
 }  // namespace stdb
 
-#endif  // FASTSTDB_COMMON_THREAD_LOCAL_H_
+#endif  // STDB_COMMON_THREAD_LOCAL_H_

@@ -1,8 +1,8 @@
 /*!
  * \file external_cursor.h
  */
-#ifndef FASTSTDB_QUERY_EXTERNAL_CURSOR_H_
-#define FASTSTDB_QUERY_EXTERNAL_CURSOR_H_
+#ifndef STDB_QUERY_EXTERNAL_CURSOR_H_
+#define STDB_QUERY_EXTERNAL_CURSOR_H_
 
 #include "stdb/common/basic.h"
 
@@ -38,4 +38,4 @@ struct ExternalCursor {
 
 }  // namespace stdb
 
-#endif  // FASTSTDB_QUERY_EXTERNAL_CURSOR_H_
+#endif  // STDB_QUERY_EXTERNAL_CURSOR_H_

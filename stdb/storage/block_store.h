@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef FASTSTDB_STORAGE_BLOCKSTORE_H_
-#define FASTSTDB_STORAGE_BLOCKSTORE_H_
+#ifndef STDB_STORAGE_BLOCKSTORE_H_
+#define STDB_STORAGE_BLOCKSTORE_H_
 
 #include "stdb/storage/volume.h"
 #include "stdb/storage/volume_registry.h"
@@ -236,4 +236,4 @@ struct BlockStoreBuilder {
 }  // namespace storage
 }  // namespace stdb
 
-#endif  // FASTSTDB_STORAGE_BLOCKSTORE_H_
+#endif  // STDB_STORAGE_BLOCKSTORE_H_

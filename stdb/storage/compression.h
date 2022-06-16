@@ -4,8 +4,8 @@
  * Compression algorithms
  *
  */
-#ifndef FASTSTDB_STORAGE_COMPRESSION_H_
-#define FASTSTDB_STORAGE_COMPRESSION_H_
+#ifndef STDB_STORAGE_COMPRESSION_H_
+#define STDB_STORAGE_COMPRESSION_H_
 
 #include <cassert>
 #include <cstddef>
@@ -1329,7 +1329,7 @@ struct IOVecBlockWriter {
 
   void init(ParamId id) {
     // offset 0
-    auto success = stream_.template put_raw<u16>(FASTSTDB_VERSION);
+    auto success = stream_.template put_raw<u16>(STDB_VERSION);
     // offset 2
     nchunks_ = stream_.template allocate<u16>();
     // offset 4
@@ -1552,4 +1552,4 @@ struct IOVecBlockReader {
 }  // namespace storage
 }  // namespace stdb
 
-#endif  // FASTSTDB_STORAGE_COMPRESSION_H_
+#endif  // STDB_STORAGE_COMPRESSION_H_

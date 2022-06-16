@@ -412,7 +412,7 @@ TEST(Compression, Test_block_compression_19) {
 struct CheckedBlock {
   enum {
     NCOMPONENTS = 4,
-    COMPONENT_SIZE = FASTSTDB_BLOCK_SIZE / NCOMPONENTS,
+    COMPONENT_SIZE = STDB_BLOCK_SIZE / NCOMPONENTS,
   };
 
   std::vector<u8> provided_;
@@ -440,9 +440,9 @@ struct CheckedBlock {
 
   u64 get_addr() const { return 0; }
 
-  int space_left() const { return static_cast<int>(FASTSTDB_BLOCK_SIZE - pos_); }
+  int space_left() const { return static_cast<int>(STDB_BLOCK_SIZE - pos_); }
 
-  int size() const { return FASTSTDB_BLOCK_SIZE; }
+  int size() const { return STDB_BLOCK_SIZE; }
 
   void put(u8 val) {
     EXPECT_EQ(val, provided_.at(pos_));

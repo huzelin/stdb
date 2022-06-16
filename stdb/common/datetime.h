@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef FASTSTDB_COMMON_DATETIME_H_
-#define FASTSTDB_COMMON_DATETIME_H_
+#ifndef STDB_COMMON_DATETIME_H_
+#define STDB_COMMON_DATETIME_H_
 
 #include <chrono>
 
@@ -70,4 +70,4 @@ struct DateTimeUtil {
 
 }  // namespace stdb
 
-#endif  // FASTSTDB_COMMON_DATETIME_H_
+#endif  // STDB_COMMON_DATETIME_H_

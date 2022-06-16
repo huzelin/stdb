@@ -1,8 +1,8 @@
 /*!
  * \file eval.h
  */
-#ifndef FASTSTDB_QUERY_QUERY_PROCESSING_EVAL_H_
-#define FASTSTDB_QUERY_QUERY_PROCESSING_EVAL_H_
+#ifndef STDB_QUERY_QUERY_PROCESSING_EVAL_H_
+#define STDB_QUERY_QUERY_PROCESSING_EVAL_H_
 
 #include <memory>
 #include <string>
@@ -37,4 +37,4 @@ struct ExprEval : Node {
 }  // namespace qp
 }  // namespace stdb
 
-#endif  // FASTSTDB_QUERY_QUERY_PROCESSING_EVAL_H_
+#endif  // STDB_QUERY_QUERY_PROCESSING_EVAL_H_

@@ -13,8 +13,8 @@
  * limitations under the License.
  *
  */
-#ifndef FASTSTDB_CORE_STORAGE_H_
-#define FASTSTDB_CORE_STORAGE_H_
+#ifndef STDB_CORE_STORAGE_H_
+#define STDB_CORE_STORAGE_H_
 
 #include <atomic>
 #include <cstddef>
@@ -228,4 +228,4 @@ class Storage : public std::enable_shared_from_this<Storage> {
 
 }  // namespace stdb
 
-#endif  // FASTSTDB_CORE_STORAGE_H_
+#endif  // STDB_CORE_STORAGE_H_

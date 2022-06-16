@@ -1,8 +1,8 @@
 /*!
  * \file timer.h
  */
-#ifndef FASTSTDB_COMMON_TIMER_H_
-#define FASTSTDB_COMMON_TIMER_H_
+#ifndef STDB_COMMON_TIMER_H_
+#define STDB_COMMON_TIMER_H_
 
 #include <sys/time.h>
 
@@ -27,4 +27,4 @@ class Timer {
 }  // namespace common
 }  // namespace stdb
 
-#endif  // FASTSTDB_COMMON_TIMER_H_
+#endif  // STDB_COMMON_TIMER_H_

@@ -1,8 +1,8 @@
 /*!
  * \file volume_registry.h
  */
-#ifndef FASTSTDB_STORAGE_VOLUME_REGISTRY_H_
-#define FASTSTDB_STORAGE_VOLUME_REGISTRY_H_
+#ifndef STDB_STORAGE_VOLUME_REGISTRY_H_
+#define STDB_STORAGE_VOLUME_REGISTRY_H_
 
 #include <vector>
 #include <string>
@@ -61,4 +61,4 @@ struct VolumeRegistry {
 }  // namespace storage
 }  // namespace stdb
 
-#endif  // FASTSTDB_STORAGE_VOLUME_REGISTRY_H_
+#endif  // STDB_STORAGE_VOLUME_REGISTRY_H_

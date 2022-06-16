@@ -1,8 +1,8 @@
 /*!
  * \file config.h
  */
-#ifndef FASTSTDB_COMMON_CONFIG_H_
-#define FASTSTDB_COMMON_CONFIG_H_
+#ifndef STDB_COMMON_CONFIG_H_
+#define STDB_COMMON_CONFIG_H_
 
 #include "stdb/common/types.h"
 
@@ -24,4 +24,4 @@ typedef struct {
 
 } FineTuneParams;
 
-#endif  // FASTSTDB_COMMON_CONFIG_H_
+#endif  // STDB_COMMON_CONFIG_H_

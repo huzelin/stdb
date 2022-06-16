@@ -14,8 +14,8 @@
  * limitations under the License.
  *
  */
-#ifndef FASTSTDB_STORAGE_COLUMN_STORE_H_
-#define FASTSTDB_STORAGE_COLUMN_STORE_H_ 
+#ifndef STDB_STORAGE_COLUMN_STORE_H_
+#define STDB_STORAGE_COLUMN_STORE_H_ 
 
 /* In general this is a tree-roots collection combined with various algorithms (
  * (aggregate, join, group-aggregate). One TreeRegistery should be created
@@ -249,4 +249,4 @@ class CStoreSession : public std::enable_shared_from_this<CStoreSession> {
 }  // namespace storage
 }  // namespace stdb
 
-#endif  // FASTSTDB_STORAGE_COLUMN_STORE_H_
+#endif  // STDB_STORAGE_COLUMN_STORE_H_

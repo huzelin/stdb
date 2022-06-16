@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef FASTSTDB_CORE_METADATASTORAGE_H_
-#define FASTSTDB_CORE_METADATASTORAGE_H_
+#ifndef STDB_CORE_METADATASTORAGE_H_
+#define STDB_CORE_METADATASTORAGE_H_
 
 #include <cstddef>
 #include <memory>
@@ -181,4 +181,4 @@ struct MetadataStorage : storage::VolumeRegistry {
 
 }  // namespace stdb
 
-#endif  // FASTSTDB_CORE_METADATASTORAGE_H_
+#endif  // STDB_CORE_METADATASTORAGE_H_

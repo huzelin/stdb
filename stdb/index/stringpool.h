@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef FASTSTDB_INDEX_STRINGPOOL_H_
-#define FASTSTDB_INDEX_STRINGPOOL_H_
+#ifndef STDB_INDEX_STRINGPOOL_H_
+#define STDB_INDEX_STRINGPOOL_H_
 
 #include <atomic>
 #include <deque>
@@ -153,4 +153,4 @@ struct StringTools {
 
 }  // namespace stdb
 
-#endif  // FASTSTDB_INDEX_STRINGPOOL_H_
+#endif  // STDB_INDEX_STRINGPOOL_H_

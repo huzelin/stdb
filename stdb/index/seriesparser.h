@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef FASTSTDB_CORE_SERIES_PARSER_H_
-#define FASTSTDB_CORE_SERIES_PARSER_H_
+#ifndef STDB_CORE_SERIES_PARSER_H_
+#define STDB_CORE_SERIES_PARSER_H_
 
 #include <deque>
 #include <map>
@@ -33,7 +33,7 @@
 
 namespace stdb {
 
-static const i64 FASTSTDB_STARTING_SERIES_ID = 1024;
+static const i64 STDB_STARTING_SERIES_ID = 1024;
 
 struct SeriesMatcherBase {
 
@@ -88,7 +88,7 @@ struct SeriesMatcher : SeriesMatcherBase {
   std::vector<SeriesNameT> names;      //! List of recently added names
   mutable std::mutex       mutex;      //! Mutex for shared data
 
-  SeriesMatcher(i64 starting_id = FASTSTDB_STARTING_SERIES_ID);
+  SeriesMatcher(i64 starting_id = STDB_STARTING_SERIES_ID);
 
   /** Add new string to matcher.
   */
@@ -162,7 +162,7 @@ struct PlainSeriesMatcher : SeriesMatcherBase {
   std::vector<SeriesNameT> names;      //! List of recently added names
   mutable std::mutex       mutex;      //! Mutex for shared data
 
-  PlainSeriesMatcher(i64 starting_id = FASTSTDB_STARTING_SERIES_ID);
+  PlainSeriesMatcher(i64 starting_id = STDB_STARTING_SERIES_ID);
 
   /** Add new string to matcher.
   */
@@ -213,7 +213,7 @@ struct SeriesParser {
    * @param out_begin points to the begining of the output buffer (should be not less then input buffer)
    * @param out_end points to the end of the output buffer
    * @param keystr_begin points to the begining of the key string (string with key-value pairs)
-   * @return FASTSTDB_SUCCESS if everything is OK, error code otherwise
+   * @return STDB_SUCCESS if everything is OK, error code otherwise
    */
   static common::Status to_canonical_form(const char* begin, const char* end, char* out_begin,
                                           char* out_end, const char** keystr_begin,
@@ -275,4 +275,4 @@ struct GroupByTag {
 
 }  // namespace stdb
 
-#endif  // FASTSTDB_CORE_SERIES_PARSER_H_
+#endif  // STDB_CORE_SERIES_PARSER_H_

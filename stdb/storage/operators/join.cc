@@ -17,7 +17,7 @@ JoinMaterializer::JoinMaterializer(std::vector<ParamId>&& ids,
                                    ParamId id)
    : orig_ids_(ids),
      id_(id),
-     curr_(FASTSTDB_MIN_TIMESTAMP),
+     curr_(STDB_MIN_TIMESTAMP),
      buffer_size_(0),
      buffer_pos_(0),
      max_ssize_(static_cast<u32>(sizeof(Sample) + sizeof(double) * ids.size())) {

@@ -466,7 +466,7 @@ int get_resource(const char* res_name, char* buf, size_t* bufsize) {
     std::copy(result.begin(), result.end(), buf);
     *bufsize = result.size();
   } else if (res == "version") {
-    std::string result = "FastSTDB " + std::to_string(FASTSTDB_VERSION);  // add build info
+    std::string result = "FastSTDB " + std::to_string(STDB_VERSION);  // add build info
     if (result.size() > *bufsize) {
       return common::Status::kOverflow;
     }

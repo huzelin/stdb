@@ -1,8 +1,8 @@
 /*!
  * \file rwlock.h
  */
-#ifndef FASTSTDB_COMMON_RWLOCK_H_
-#define FASTSTDB_COMMON_RWLOCK_H_
+#ifndef STDB_COMMON_RWLOCK_H_
+#define STDB_COMMON_RWLOCK_H_
 
 #include "pthread.h"
 
@@ -58,4 +58,4 @@ using SharedLock = LockGuard<RWLock, &RWLock::wrlock>;
 }  // namespace common
 }  // namespace stdb
 
-#endif  // FASTSTDB_COMMON_RWLOCK_H_
+#endif  // STDB_COMMON_RWLOCK_H_

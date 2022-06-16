@@ -1,8 +1,8 @@
 /*!
  * \file aggregate.h
  */
-#ifndef FASTSTDB_STORAGE_OPERATORS_AGGREGATE_H_
-#define FASTSTDB_STORAGE_OPERATORS_AGGREGATE_H_
+#ifndef STDB_STORAGE_OPERATORS_AGGREGATE_H_
+#define STDB_STORAGE_OPERATORS_AGGREGATE_H_
 
 #include <cassert>
 
@@ -211,4 +211,4 @@ struct TimeOrderAggregateMaterializer : TupleOutputUtils, ColumnMaterializer {
 }  // namespace storage
 }  // namespace stdb
 
-#endif  // FASTSTDB_STORAGE_OPERATORS_AGGREGATE_H_
+#endif  // STDB_STORAGE_OPERATORS_AGGREGATE_H_

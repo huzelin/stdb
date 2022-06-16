@@ -1,8 +1,8 @@
 /*!
  * \file join.h
  */
-#ifndef FASTSTDB_STORAGE_OPERATORS_JOIN_H_
-#define FASTSTDB_STORAGE_OPERATORS_JOIN_H_
+#ifndef STDB_STORAGE_OPERATORS_JOIN_H_
+#define STDB_STORAGE_OPERATORS_JOIN_H_
 
 #include "stdb/storage/operators/join.h"
 #include "stdb/storage/operators/merge.h"
@@ -89,4 +89,4 @@ struct JoinConcatMaterializer : ColumnMaterializer {
 }  // namespace storage
 }  // namespace stdb
 
-#endif  // FASTSTDB_STORAGE_OPERATORS_JOIN_H_
+#endif  // STDB_STORAGE_OPERATORS_JOIN_H_

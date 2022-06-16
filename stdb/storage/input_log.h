@@ -1,8 +1,8 @@
 /*!
  * \file input_log.h
  */
-#ifndef FASTSTDB_STORAGE_INPUT_LOG_H_
-#define FASTSTDB_STORAGE_INPUT_LOG_H_
+#ifndef STDB_STORAGE_INPUT_LOG_H_
+#define STDB_STORAGE_INPUT_LOG_H_
 
 #include <string>
 #include <vector>
@@ -394,4 +394,4 @@ class ShardedInputLog {
 }  // namespace storage
 }  // namespace stdb
 
-#endif  // FASTSTDB_STORAGE_INPUT_LOG_H_
+#endif  // STDB_STORAGE_INPUT_LOG_H_

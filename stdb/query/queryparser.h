@@ -1,8 +1,8 @@
 /*!
  * \file queryparser.h
  */
-#ifndef FASTSTDB_QUERY_QUERYPARSER_H_
-#define FASTSTDB_QUERY_QUERYPARSER_H_
+#ifndef STDB_QUERY_QUERYPARSER_H_
+#define STDB_QUERY_QUERYPARSER_H_
 
 #include <string>
 
@@ -137,4 +137,4 @@ struct QueryParser {
 }  // namespace qp
 }  // namespace stdb
 
-#endif  // FASTSTDB_QUERY_QUERYPARSER_H_
+#endif  // STDB_QUERY_QUERYPARSER_H_

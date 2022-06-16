@@ -1,8 +1,8 @@
 /*!
  * \file hash.cc
  */
-#ifndef FASTSTDB_COMMON_HASH_H_
-#define FASTSTDB_COMMON_HASH_H_
+#ifndef STDB_COMMON_HASH_H_
+#define STDB_COMMON_HASH_H_
 
 #include "stdb/common/hash.h"
 
@@ -12,4 +12,4 @@ namespace common {
 }  // namespace common
 }  // namespace stdb
 
-#endif  // FASTSTDB_COMMON_HASH_H_
+#endif  // STDB_COMMON_HASH_H_

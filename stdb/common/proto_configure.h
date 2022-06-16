@@ -2,8 +2,8 @@
  * \file proto_configure.h
  * \desc The protobuf config parser
  */
-#ifndef FASTSTDB_COMMON_PROTO_CONFIGURE_H_
-#define FASTSTDB_COMMON_PROTO_CONFIGURE_H_
+#ifndef STDB_COMMON_PROTO_CONFIGURE_H_
+#define STDB_COMMON_PROTO_CONFIGURE_H_
 
 #include <string>
 
@@ -64,4 +64,4 @@ class ProtoConfigure {
 }  // namespace common
 }  // namespace stdb
 
-#endif  // FASTSTDB_COMMON_PROTO_CONFIGURE_H_
+#endif  // STDB_COMMON_PROTO_CONFIGURE_H_

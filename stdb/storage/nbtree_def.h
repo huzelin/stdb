@@ -14,8 +14,8 @@
  * limitations under the License.
  *
  */
-#ifndef FASTSTDB_STORAGE_NBTREE_DEF_H_
-#define FASTSTDB_STORAGE_NBTREE_DEF_H_
+#ifndef STDB_STORAGE_NBTREE_DEF_H_
+#define STDB_STORAGE_NBTREE_DEF_H_
 
 #include "stdb/common/basic.h"
 #include "stdb/storage/block_store.h"
@@ -86,4 +86,4 @@ struct SubtreeRef {
 }  // namespace storage
 }  // namespace stdb
 
-#endif  // FASTSTDB_STORAGE_NBTREE_DEF_H_
+#endif  // STDB_STORAGE_NBTREE_DEF_H_

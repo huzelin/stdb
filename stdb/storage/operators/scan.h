@@ -1,8 +1,8 @@
 /*!
  * \file scan.h
  */
-#ifndef FASTSTDB_STORAGE_OPERATORS_SCAN_H_
-#define FASTSTDB_STORAGE_OPERATORS_SCAN_H_
+#ifndef STDB_STORAGE_OPERATORS_SCAN_H_
+#define STDB_STORAGE_OPERATORS_SCAN_H_
 
 #include "stdb/storage/operators/operator.h"
 
@@ -67,4 +67,4 @@ class EventChainMaterializer : public ColumnMaterializer {
 }  // namespace storage
 }  // namespace stdb
 
-#endif  // FASTSTDB_STORAGE_OPERATORS_SCAN_H_
+#endif  // STDB_STORAGE_OPERATORS_SCAN_H_

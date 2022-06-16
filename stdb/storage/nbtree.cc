@@ -71,7 +71,7 @@ static const SubtreeRef INIT_SUBTREE_REF = {
   //! Payload size (real)
   0,
   //! Node version
-  FASTSTDB_VERSION,
+  STDB_VERSION,
   //! Fan out index of the element (current)
   0,
   //! Checksum of the block (not used for links to child nodes)
@@ -110,7 +110,7 @@ static std::tuple<common::Status, std::unique_ptr<IOVecBlock>> read_and_check(st
   if (!status.IsOk()) {
     return std::make_tuple(status, std::move(block));
   }
-  if (block->get_size(0) == FASTSTDB_BLOCK_SIZE) {
+  if (block->get_size(0) == STDB_BLOCK_SIZE) {
     // This check only makes sense when reading data back. In this case IOVecBlock will
     // contain one large component.
     u8 const* data = block->get_cdata(0);
@@ -134,7 +134,7 @@ static std::unique_ptr<IOVecBlock> read_iovec_block_from_bstore(std::shared_ptr<
     LOG(FATAL) << "Can't read block @" << curr << ", error: " << status.ToString();
   }
   // Check consistency (works with both inner and leaf nodes).
-  if (block->get_size(0) == FASTSTDB_BLOCK_SIZE) {
+  if (block->get_size(0) == STDB_BLOCK_SIZE) {
     // This check only makes sense when reading data back. In this case IOVecBlock will
     // contain one large component.
     u8 const* data = block->get_cdata(0);
@@ -199,7 +199,7 @@ common::Status init_subtree_from_subtree(const IOVecSuperblock& node, SubtreeRef
   backref.id = node.get_id();
   backref.level = node.get_level();
   backref.type = NBTreeBlockType::INNER;
-  backref.version = FASTSTDB_VERSION;
+  backref.version = STDB_VERSION;
   backref.fanout_index = node.get_fanout();
   backref.payload_size = 0;
 
@@ -1041,7 +1041,7 @@ struct NBTreeSBlockAggregator : SeriesOperator<AggregationResult> {
                          SuperblockT const& sblock,
                          Timestamp begin,
                          Timestamp end)
-     : leftmost_leaf_found_(std::min(begin, end) == FASTSTDB_MIN_TIMESTAMP && std::max(begin, end) == FASTSTDB_MAX_TIMESTAMP)
+     : leftmost_leaf_found_(std::min(begin, end) == STDB_MIN_TIMESTAMP && std::max(begin, end) == STDB_MAX_TIMESTAMP)
        , impl_(bstore, sblock, std::min(begin, end), std::max(begin, end), leftmost_leaf_found_)
   {
   }
@@ -1050,7 +1050,7 @@ struct NBTreeSBlockAggregator : SeriesOperator<AggregationResult> {
                          LogicAddr addr,
                          Timestamp begin,
                          Timestamp end)
-      : leftmost_leaf_found_(std::min(begin, end) == FASTSTDB_MIN_TIMESTAMP && std::max(begin, end) == FASTSTDB_MAX_TIMESTAMP)
+      : leftmost_leaf_found_(std::min(begin, end) == STDB_MIN_TIMESTAMP && std::max(begin, end) == STDB_MAX_TIMESTAMP)
         , impl_(bstore, addr, std::min(begin, end), std::max(begin, end), leftmost_leaf_found_)
   {
   }
@@ -1526,7 +1526,7 @@ std::tuple<common::Status, size_t> NBTreeSBlockCandlesticsIter::read(Timestamp *
 class BinaryDataIterator : public BinaryDataOperator {
   std::unique_ptr<RealValuedOperator> base_;
   enum {
-    BUF_SIZE = 1 + (FASTSTDB_LIMITS_MAX_EVENT_LEN / 8)
+    BUF_SIZE = 1 + (STDB_LIMITS_MAX_EVENT_LEN / 8)
   };
   std::array<Timestamp, BUF_SIZE> ts_;
   std::array<double, BUF_SIZE> xs_;
@@ -1684,7 +1684,7 @@ IOVecLeaf::IOVecLeaf(ParamId id, LogicAddr prev, u16 fanout_index)
   subtree->level = 0;  // Leaf node
   subtree->type = NBTreeBlockType::LEAF;
   subtree->id = id;
-  subtree->version = FASTSTDB_VERSION;
+  subtree->version = STDB_VERSION;
   subtree->payload_size = 0;
   subtree->fanout_index = fanout_index;
   // values that should be updated by insert
@@ -1876,7 +1876,7 @@ std::tuple<common::Status, LogicAddr> IOVecLeaf::commit(std::shared_ptr<BlockSto
     subtree->addr  = EMPTY_ADDR;
     // Invariant: fanout index should be 0 in this case.
   }
-  subtree->version = FASTSTDB_VERSION;
+  subtree->version = STDB_VERSION;
   subtree->level = 0;
   subtree->type  = NBTreeBlockType::LEAF;
   subtree->fanout_index = fanout_index_;
@@ -2158,12 +2158,12 @@ std::tuple<common::Status, LogicAddr> IOVecSuperblock::commit(std::shared_ptr<Bl
   }
   backref->addr = prev_;
   backref->payload_size = static_cast<u16>(write_pos_);
-  assert(backref->payload_size + sizeof(SubtreeRef) < FASTSTDB_BLOCK_SIZE);
+  assert(backref->payload_size + sizeof(SubtreeRef) < STDB_BLOCK_SIZE);
   backref->fanout_index = fanout_index_;
   backref->id = id_;
   backref->level = level_;
   backref->type  = NBTreeBlockType::INNER;
-  backref->version = FASTSTDB_VERSION;
+  backref->version = STDB_VERSION;
   // add checksum
   backref->checksum = bstore->checksum(block_->get_cdata(0) + sizeof(SubtreeRef), backref->payload_size);
   return bstore->append_block(*block_);
@@ -3294,7 +3294,7 @@ u32 NBTreeExtentsList::chose_random_node() {
 #endif
 
 std::tuple<common::Status, AggregationResult> NBTreeExtentsList::get_aggregates(u32 ixnode) const {
-  auto it = extents_.at(ixnode)->aggregate(0, FASTSTDB_MAX_TIMESTAMP);
+  auto it = extents_.at(ixnode)->aggregate(0, STDB_MAX_TIMESTAMP);
   Timestamp ts;
   AggregationResult dest;
   size_t outsz;
@@ -3341,7 +3341,7 @@ void NBTreeExtentsList::check_rescue_points(u32 i) const {
   // we can use i-1 value to restore the i'th
   LogicAddr addr = rescue_points_.at(i-1);
 
-  auto aggit = extents_.at(i)->aggregate(FASTSTDB_MIN_TIMESTAMP, FASTSTDB_MAX_TIMESTAMP);
+  auto aggit = extents_.at(i)->aggregate(STDB_MIN_TIMESTAMP, STDB_MAX_TIMESTAMP);
   Timestamp ts;
   AggregationResult res;
   size_t sz;
@@ -3371,7 +3371,7 @@ void NBTreeExtentsList::check_rescue_points(u32 i) const {
     status = sblock.append(*it);
     assert(status.IsOk());
   }
-  aggit = sblock.aggregate(FASTSTDB_MIN_TIMESTAMP, FASTSTDB_MAX_TIMESTAMP, bstore_);
+  aggit = sblock.aggregate(STDB_MIN_TIMESTAMP, STDB_MAX_TIMESTAMP, bstore_);
   AggregationResult newres;
   std::tie(status, sz) = aggit->read(&ts, &newres, 1);
   if (sz == 0 || (!status.IsOk() && status.Code() != common::Status::kNoData)) {
@@ -3395,7 +3395,7 @@ std::tuple<common::Status, LogicAddr> NBTreeExtentsList::_split(Timestamp pivot)
   size_t extent_index = extents_.size();
   // Find the extent that contains the pivot
   for (size_t i = 0; i < extents_.size(); i++) {
-    auto it = extents_.at(i)->aggregate(FASTSTDB_MIN_TIMESTAMP, FASTSTDB_MAX_TIMESTAMP);
+    auto it = extents_.at(i)->aggregate(STDB_MIN_TIMESTAMP, STDB_MAX_TIMESTAMP);
     AggregationResult res;
     size_t outsz;
     Timestamp ts;
@@ -3498,7 +3498,7 @@ NBTreeAppendResult NBTreeExtentsList::append(Timestamp ts, const u8* blob, u32 s
   // count.
   // The head element contains size [0..999] and time offset [0, 999].
   // Original timestamp can be restored using the time offset.
-  if (size == 0 || size > FASTSTDB_LIMITS_MAX_EVENT_LEN) {
+  if (size == 0 || size > STDB_LIMITS_MAX_EVENT_LEN) {
     return NBTreeAppendResult::FAIL_BAD_VALUE;
   }
   Timestamp basets = (ts / 1000) * 1000;
@@ -3665,7 +3665,7 @@ void NBTreeExtentsList::open() {
 
   // Restore `last_`
   if (extents_.size()) {
-    auto it = extents_.back()->search(FASTSTDB_MAX_TIMESTAMP, 0);
+    auto it = extents_.back()->search(STDB_MAX_TIMESTAMP, 0);
     Timestamp ts;
     double val;
     common::Status status;
@@ -3675,7 +3675,7 @@ void NBTreeExtentsList::open() {
       // The tree is empty due to retention so we can use smallest possible
       // timestamp
       LOG(INFO) << "Tree " << std::to_string(this->id_) << " is empty due to retention";
-      ts = FASTSTDB_MIN_TIMESTAMP;
+      ts = STDB_MIN_TIMESTAMP;
     }
     last_ = ts;
   }

@@ -1,8 +1,8 @@
 /*!
  * \file crc32.h
  */
-#ifndef FASTSTDB_COMMON_CRC32_H_
-#define FASTSTDB_COMMON_CRC32_H_
+#ifndef STDB_COMMON_CRC32_H_
+#define STDB_COMMON_CRC32_H_
 
 #include <stdint.h>
 #include <stddef.h>
@@ -24,4 +24,4 @@ crc32c_impl_t chose_crc32c_implementation(CRC32C_hint hint=CRC32C_hint::DETECT);
 }  // namespace common
 }  // namespace stdb
 
-#endif  // FASTSTDB_COMMON_CRC32_H_
+#endif  // STDB_COMMON_CRC32_H_

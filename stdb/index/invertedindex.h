@@ -14,8 +14,8 @@
  * limitations under the License.
  *
  */
-#ifndef FASTSTDB_INDEX_INVERTEDINDEX_H_
-#define FASTSTDB_INDEX_INVERTEDINDEX_H_
+#ifndef STDB_INDEX_INVERTEDINDEX_H_
+#define STDB_INDEX_INVERTEDINDEX_H_
 
 #include <memory>
 #include <unordered_map>
@@ -787,4 +787,4 @@ class Index : public IndexBase {
 
 }  // namespace stdb
 
-#endif  // FASTSTDB_INDEX_INVERTEDINDEX_H_
+#endif  // STDB_INDEX_INVERTEDINDEX_H_

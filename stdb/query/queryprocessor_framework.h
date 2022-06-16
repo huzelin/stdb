@@ -1,8 +1,8 @@
 /*!
  * \file queryprocessing_framework.h
  */
-#ifndef FASTSTDB_QUERY_QUERYPROCESSING_FRAMEWORK_H_
-#define FASTSTDB_QUERY_QUERYPROCESSING_FRAMEWORK_H_
+#ifndef STDB_QUERY_QUERYPROCESSING_FRAMEWORK_H_
+#define STDB_QUERY_QUERYPROCESSING_FRAMEWORK_H_
 
 #include <memory>
 #include <stdexcept>
@@ -340,4 +340,4 @@ template <class Target> struct QueryParserToken : BaseQueryParserToken {
 }  // namespace qp
 }  // namespace stdb
 
-#endif  // FASTSTDB_QUERY_QUERYPROCESSING_FRAMEWORK_H_
+#endif  // STDB_QUERY_QUERYPROCESSING_FRAMEWORK_H_

@@ -14,8 +14,8 @@
  * limitations under the License.
  *
  */
-#ifndef FASTSTDB_COMMON_MEMORYMAPPEDFILE_H_
-#define FASTSTDB_COMMON_MEMORYMAPPEDFILE_H_
+#ifndef STDB_COMMON_MEMORYMAPPEDFILE_H_
+#define STDB_COMMON_MEMORYMAPPEDFILE_H_
 
 #include <apr_general.h>
 #include <apr_mmap.h>
@@ -85,5 +85,5 @@ void prefetch_mem(const void* ptr, size_t mem_size);
 
 }  // namespace stdb
 
-#endif  // FASTSTDB_COMMON_MEMORYMAPPEDFILE_H_
+#endif  // STDB_COMMON_MEMORYMAPPEDFILE_H_
 

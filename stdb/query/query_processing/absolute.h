@@ -1,8 +1,8 @@
 /*!
  * \file absolute.h
  */
-#ifndef FASTSTDB_QUERY_QUERY_PROCESSING_ABSOLUTE_H_
-#define FASTSTDB_QUERY_QUERY_PROCESSING_ABSOLUTE_H_
+#ifndef STDB_QUERY_QUERY_PROCESSING_ABSOLUTE_H_
+#define STDB_QUERY_QUERY_PROCESSING_ABSOLUTE_H_
 
 #include <memory>
 
@@ -34,4 +34,4 @@ struct Absolute : Node {
 }  // namespace qp
 }  // namespace stdb
 
-#endif  // FASTSTDB_QUERY_QUERY_PROCESSING_ABSOLUTE_H_
+#endif  // STDB_QUERY_QUERY_PROCESSING_ABSOLUTE_H_

@@ -1,8 +1,8 @@
 /*!
  * \file merge.h
  */
-#ifndef FASTSTDB_STORAGE_OPERATORS_MERGE_H_
-#define FASTSTDB_STORAGE_OPERATORS_MERGE_H_
+#ifndef STDB_STORAGE_OPERATORS_MERGE_H_
+#define STDB_STORAGE_OPERATORS_MERGE_H_
 
 #include "stdb/storage/operators/operator.h"
 
@@ -606,4 +606,4 @@ struct MergeJoinMaterializer : ColumnMaterializer {
 }  // namespace storage
 }  // namespace stdb
 
-#endif  // FASTSTDB_STORAGE_OPERATORS_MERGE_H_
+#endif  // STDB_STORAGE_OPERATORS_MERGE_H_

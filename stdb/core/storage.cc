@@ -67,7 +67,7 @@ static apr_status_t create_metadata_page(const char* db_name
       volume.capacity = capacities[ix];
       volume.id = ix;
       volume.nblocks = 0;
-      volume.version = FASTSTDB_VERSION;
+      volume.version = STDB_VERSION;
       desc.push_back(volume);
       ix++;
     }

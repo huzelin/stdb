@@ -14,8 +14,8 @@
  * limitations under the License.
  *
  */
-#ifndef FASTSTDB_CORE_CURSOR_H_
-#define FASTSTDB_CORE_CURSOR_H_
+#ifndef STDB_CORE_CURSOR_H_
+#define STDB_CORE_CURSOR_H_
 
 #include <memory>
 #include <vector>
@@ -115,4 +115,4 @@ struct ConcurrentCursor : CursorInterface {
 
 }  // namespace stdb
 
-#endif  // FASTSTDB_CORE_CURSOR_H_
+#endif  // STDB_CORE_CURSOR_H_

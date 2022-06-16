@@ -1,8 +1,8 @@
 /*!
  * \file types.h
  */
-#ifndef FASTSTDB_COMMON_TYPES_H_
-#define FASTSTDB_COMMON_TYPES_H_
+#ifndef STDB_COMMON_TYPES_H_
+#define STDB_COMMON_TYPES_H_
 
 #include <stdint.h>
 
@@ -65,4 +65,4 @@ typedef struct {
   PData     payload;
 } Sample;
 
-#endif  // FASTSTDB_COMMON_TYPES_H_
+#endif  // STDB_COMMON_TYPES_H_

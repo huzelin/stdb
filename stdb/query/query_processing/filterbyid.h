@@ -1,8 +1,8 @@
 /*!
  * \file filterbyid.h
  */
-#ifndef FASTSTDB_QUERY_QUERY_PROCESSING_FILTERBYID_H_ 
-#define FASTSTDB_QUERY_QUERY_PROCESSING_FILTERBYID_H_
+#ifndef STDB_QUERY_QUERY_PROCESSING_FILTERBYID_H_ 
+#define STDB_QUERY_QUERY_PROCESSING_FILTERBYID_H_
 
 #include <memory>
 
@@ -43,4 +43,4 @@ struct FilterByIdNode : std::enable_shared_from_this<FilterByIdNode<Predicate>>,
 }  // namespace qp
 }  // namespace stdb
 
-#endif  // FASTSTDB_QUERY_QUERY_PROCESSING_FILTERBYID_H_
+#endif  // STDB_QUERY_QUERY_PROCESSING_FILTERBYID_H_

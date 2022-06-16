@@ -478,7 +478,7 @@ MemStore::MemStore(std::function<void(LogicAddr)> append_cb,
 LogicAddr MemStore::remove(size_t n) {
   removed_pos_ = n;
   if (removed_pos_ > buffer_.size()) {
-    buffer_.resize(removed_pos_ * FASTSTDB_BLOCK_SIZE);
+    buffer_.resize(removed_pos_ * STDB_BLOCK_SIZE);
     write_pos_ = n;
   }
   return n + MEMSTORE_BASE;
@@ -506,19 +506,19 @@ u32 MemStore::checksum(const IOVecBlock& block, size_t offset , size_t size) con
 std::tuple<common::Status, std::unique_ptr<IOVecBlock>> MemStore::read_iovec_block(LogicAddr addr) {
   addr -= MEMSTORE_BASE;
   std::lock_guard<std::mutex> guard(lock_);
-  u32 offset = static_cast<u32>(FASTSTDB_BLOCK_SIZE * addr);
+  u32 offset = static_cast<u32>(STDB_BLOCK_SIZE * addr);
   std::unique_ptr<IOVecBlock> block;
-  if (buffer_.size() < (offset + FASTSTDB_BLOCK_SIZE)) {
+  if (buffer_.size() < (offset + STDB_BLOCK_SIZE)) {
     return std::make_tuple(common::Status::BadArg(""), std::move(block));
   }
   if (addr < removed_pos_) {
     return std::make_tuple(common::Status::Unavailable(""), std::move(block));
   }
   auto begin = buffer_.begin() + offset;
-  auto end = begin + FASTSTDB_BLOCK_SIZE;
+  auto end = begin + STDB_BLOCK_SIZE;
   block.reset(new IOVecBlock(true));
   u8* dest = block->get_data(0);
-  assert(block->get_size(0) == FASTSTDB_BLOCK_SIZE);
+  assert(block->get_size(0) == STDB_BLOCK_SIZE);
   std::copy(begin, end, dest);
   if (read_callback_) {
     read_callback_(addr);

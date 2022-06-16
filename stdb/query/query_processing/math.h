@@ -1,8 +1,8 @@
 /*!
  * \file math.h
  */
-#ifndef FASTSTDB_QUERY_QUERY_PROCESSING_MATH_H_
-#define FASTSTDB_QUERY_QUERY_PROCESSING_MATH_H_
+#ifndef STDB_QUERY_QUERY_PROCESSING_MATH_H_
+#define STDB_QUERY_QUERY_PROCESSING_MATH_H_
 
 #include <memory>
 
@@ -84,4 +84,4 @@ int MathOperation<Op>::get_requirements() const {
 }  // namespace qp
 }  // namespace stdb
 
-#endif  // FASTSTDB_QUERY_QUERY_PROCESSING_MATH_H_
+#endif  // STDB_QUERY_QUERY_PROCESSING_MATH_H_

@@ -1,8 +1,8 @@
 /*!
  * \file hash.h
  */
-#ifndef FASTSTDB_COMMON_HASH_H_
-#define FASTSTDB_COMMON_HASH_H_
+#ifndef STDB_COMMON_HASH_H_
+#define STDB_COMMON_HASH_H_
 
 #include <stdint.h>
 
@@ -200,4 +200,4 @@ class ConsistentHash {
 }  // namespace common
 }  // namespace stdb
 
-#endif  // FASTSTDB_COMMON_HASH_H_
+#endif  // STDB_COMMON_HASH_H_

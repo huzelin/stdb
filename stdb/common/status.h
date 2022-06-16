@@ -1,8 +1,8 @@
 /*!
  * \file status.h
  */
-#ifndef FASTSTDB_COMMON_STATUS_H_
-#define FASTSTDB_COMMON_STATUS_H_
+#ifndef STDB_COMMON_STATUS_H_
+#define STDB_COMMON_STATUS_H_
 
 #include <memory>
 #include <string>
@@ -216,4 +216,4 @@ class Status {
     }						                                   \
   } while (0)
 
-#endif  // FASTSTDB_COMMON_STATUS_H_
+#endif  // STDB_COMMON_STATUS_H_

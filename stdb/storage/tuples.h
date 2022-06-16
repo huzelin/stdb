@@ -1,8 +1,8 @@
 /*!
  * \file tuples.h
  */
-#ifndef FASTSTDB_STORAGE_TUPLES_H_
-#define FASTSTDB_STORAGE_TUPLES_H_
+#ifndef STDB_STORAGE_TUPLES_H_
+#define STDB_STORAGE_TUPLES_H_
 
 #include <tuple>
 #include <vector>
@@ -157,4 +157,4 @@ struct TupleOutputUtils {
 }  // namespace storage
 }  // namespace stdb
 
-#endif  // FASTSTDB_STORAGE_TUPLES_H_
+#endif  // STDB_STORAGE_TUPLES_H_

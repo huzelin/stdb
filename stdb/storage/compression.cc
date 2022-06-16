@@ -71,7 +71,7 @@ DataBlockWriter::DataBlockWriter(ParamId id, u8 *buf, int size)
     , write_index_(0)
 {
   // offset 0
-  auto success = stream_.put_raw<u16>(FASTSTDB_VERSION);
+  auto success = stream_.put_raw<u16>(STDB_VERSION);
   // offset 2
   nchunks_ = stream_.allocate<u16>();
   // offset 4

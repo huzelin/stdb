@@ -1,8 +1,8 @@
 /*!
  * \file file_utils.h
  */
-#ifndef FASTSTDB_COMMON_FILE_UTILS_H_
-#define FASTSTDB_COMMON_FILE_UTILS_H_
+#ifndef STDB_COMMON_FILE_UTILS_H_
+#define STDB_COMMON_FILE_UTILS_H_
 
 #include <dirent.h>
 #include <unistd.h>
@@ -56,4 +56,4 @@ inline void RemoveFile(const std::string& file_path) {
 }  // namespace common
 }  // namespace stdb
 
-#endif  // FASTSTDB_COMMON_FILE_UTILS_H_
+#endif  // STDB_COMMON_FILE_UTILS_H_

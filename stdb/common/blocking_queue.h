@@ -2,8 +2,8 @@
  * \file blocking_queue.h
  * \brief The blocking queue
  */
-#ifndef FASTSTDB_COMMON_BLOCKING_QUEUE_H_
-#define FASTSTDB_COMMON_BLOCKING_QUEUE_H_
+#ifndef STDB_COMMON_BLOCKING_QUEUE_H_
+#define STDB_COMMON_BLOCKING_QUEUE_H_
 
 #include <atomic>
 #include <chrono>
@@ -95,4 +95,4 @@ class BlockingQueue {
 }  // namespace common
 }  // namespace stdb
 
-#endif  // FASTSTDB_COMMON_BLOCKING_QUEUE_H_
+#endif  // STDB_COMMON_BLOCKING_QUEUE_H_

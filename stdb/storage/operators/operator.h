@@ -19,8 +19,8 @@
  * Example of such operator is a join operator. This operator consumes several series operators
  * and produces sequence of tuples.
  */
-#ifndef FASTSTDB_STORAGE_OPERATORS_OPERATOR_H_
-#define FASTSTDB_STORAGE_OPERATORS_OPERATOR_H_
+#ifndef STDB_STORAGE_OPERATORS_OPERATOR_H_
+#define STDB_STORAGE_OPERATORS_OPERATOR_H_
 
 #include <string>
 
@@ -227,4 +227,4 @@ struct AggregateFilter {
 }  // namespace storage
 }  // namespace stdb
 
-#endif  // FASTSTDB_STORAGE_OPERATORS_OPERATOR_H_
+#endif  // STDB_STORAGE_OPERATORS_OPERATOR_H_

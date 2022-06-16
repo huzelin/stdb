@@ -14,8 +14,8 @@
  * limitations under the License.
  *
  */
-#ifndef FASTSTDB_QUERY_INTERNAL_CURSOR_H_
-#define FASTSTDB_QUERY_INTERNAL_CURSOR_H_
+#ifndef STDB_QUERY_INTERNAL_CURSOR_H_
+#define STDB_QUERY_INTERNAL_CURSOR_H_
 
 #include "stdb/common/basic.h"
 #include "stdb/common/status.h"
@@ -36,4 +36,4 @@ struct InternalCursor {
 
 }  // namespace stdb
 
-#endif  // FASTSTDB_QUERY_INTERNAL_CURSOR_H_
+#endif  // STDB_QUERY_INTERNAL_CURSOR_H_

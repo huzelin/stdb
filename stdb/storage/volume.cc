@@ -22,9 +22,9 @@ IOVecBlock::IOVecBlock() :
 
 IOVecBlock::IOVecBlock(bool) :
     data_{},
-    pos_(FASTSTDB_BLOCK_SIZE),
+    pos_(STDB_BLOCK_SIZE),
     addr_(EMPTY_ADDR) {
-  data_[0].resize(FASTSTDB_BLOCK_SIZE);
+  data_[0].resize(STDB_BLOCK_SIZE);
 }
 
 void IOVecBlock::set_addr(LogicAddr addr) {
@@ -50,7 +50,7 @@ int IOVecBlock::add() {
 }
 
 int IOVecBlock::space_left() const {
-  return FASTSTDB_BLOCK_SIZE - pos_;
+  return STDB_BLOCK_SIZE - pos_;
 }
 
 int IOVecBlock::bytes_to_read(u32 offset) const {
@@ -91,7 +91,7 @@ u8* IOVecBlock::allocate(u32 size) {
 u8 IOVecBlock::get(u32 offset) const {
   u32 c;
   u32 i;
-  if (data_[0].size() == FASTSTDB_BLOCK_SIZE) {
+  if (data_[0].size() == STDB_BLOCK_SIZE) {
     c = 0;
     i = offset;
   } else {
@@ -132,7 +132,7 @@ void IOVecBlock::set_write_pos(int pos) {
 
 void IOVecBlock::copy_from(const IOVecBlock& other) {
   // Single chunk
-  if (other.data_[0].size() == FASTSTDB_BLOCK_SIZE) {
+  if (other.data_[0].size() == STDB_BLOCK_SIZE) {
     u32 cons = 0;
     for (int i = 0; i < NCOMPONENTS; i++) {
       data_[i].resize(COMPONENT_SIZE);
@@ -151,7 +151,7 @@ void IOVecBlock::copy_from(const IOVecBlock& other) {
 }
 
 u32 IOVecBlock::read_chunk(void* dest, u32 offset, u32 size) {
-  if (data_[0].size() == FASTSTDB_BLOCK_SIZE) {
+  if (data_[0].size() == STDB_BLOCK_SIZE) {
     memcpy(dest, data_[0].data() + offset, size);
   } else {
     // Locate the component first
@@ -190,9 +190,9 @@ u32 IOVecBlock::append_chunk(const void* source, u32 size) {
   if (is_readonly()) {
     return 0;
   }
-  if (data_[0].size() == FASTSTDB_BLOCK_SIZE) {
+  if (data_[0].size() == STDB_BLOCK_SIZE) {
     // Fast path
-    if (pos_ + size > FASTSTDB_BLOCK_SIZE) {
+    if (pos_ + size > STDB_BLOCK_SIZE) {
       return 0;
     }
     memcpy(data_[0].data() + pos_, source, size);
@@ -243,7 +243,7 @@ u32 IOVecBlock::append_chunk(const void* source, u32 size) {
 
 void IOVecBlock::set_write_pos_and_shrink(int top) {
   set_write_pos(top);
-  if (is_readonly() || data_[0].size() == FASTSTDB_BLOCK_SIZE) {
+  if (is_readonly() || data_[0].size() == STDB_BLOCK_SIZE) {
     return;
   }
   int component  = pos_ / IOVecBlock::COMPONENT_SIZE;
@@ -294,7 +294,7 @@ static void volcpy(u8* block, const VolumeRegistry::VolumeDesc* desc) {
 MetaVolume::MetaVolume(std::shared_ptr<VolumeRegistry> meta)
   : meta_(meta) {
   auto volumes = meta_->get_volumes();
-  file_size_ = volumes.size() * FASTSTDB_BLOCK_SIZE;
+  file_size_ = volumes.size() * STDB_BLOCK_SIZE;
   double_write_buffer_.resize(file_size_);
   std::set<u32> init_list;
   for (const auto& vol: volumes) {
@@ -302,13 +302,13 @@ MetaVolume::MetaVolume(std::shared_ptr<VolumeRegistry> meta)
       LOG(FATAL) << "Duplicate volumne record";
     }
     init_list.insert(vol.id);
-    auto block = double_write_buffer_.data() + vol.id * FASTSTDB_BLOCK_SIZE;
+    auto block = double_write_buffer_.data() + vol.id * STDB_BLOCK_SIZE;
     volcpy(block, &vol);
   }
 }
 
 size_t MetaVolume::get_nvolumes() const {
-  return file_size_ / FASTSTDB_BLOCK_SIZE;
+  return file_size_ / STDB_BLOCK_SIZE;
 }
 
 std::unique_ptr<MetaVolume> MetaVolume::open_existing(std::shared_ptr<VolumeRegistry> meta) {
@@ -319,13 +319,13 @@ std::unique_ptr<MetaVolume> MetaVolume::open_existing(std::shared_ptr<VolumeRegi
 
 //! Helper function
 static VolumeRef* get_volref(u8* p, u32 id) {
-  u8* it = p + id * FASTSTDB_BLOCK_SIZE;
+  u8* it = p + id * STDB_BLOCK_SIZE;
   VolumeRef* vol = reinterpret_cast<VolumeRef*>(it);
   return vol;
 }
 
 std::tuple<common::Status, u32> MetaVolume::get_nblocks(u32 id) const {
-  if (id < file_size_ / FASTSTDB_BLOCK_SIZE) {
+  if (id < file_size_ / STDB_BLOCK_SIZE) {
     auto pvol = get_volref(double_write_buffer_.data(), id);
     u32 nblocks = pvol->nblocks;
     return std::make_tuple(common::Status::Ok(), nblocks);
@@ -334,7 +334,7 @@ std::tuple<common::Status, u32> MetaVolume::get_nblocks(u32 id) const {
 }
 
 std::tuple<common::Status, u32> MetaVolume::get_capacity(u32 id) const {
-  if (id < file_size_ / FASTSTDB_BLOCK_SIZE) {
+  if (id < file_size_ / STDB_BLOCK_SIZE) {
     auto pvol = get_volref(double_write_buffer_.data(), id);
     u32 cap = pvol->capacity;
     return std::make_tuple(common::Status::Ok(), cap);
@@ -343,7 +343,7 @@ std::tuple<common::Status, u32> MetaVolume::get_capacity(u32 id) const {
 }
 
 std::tuple<common::Status, u32> MetaVolume::get_generation(u32 id) const {
-  if (id < file_size_ / FASTSTDB_BLOCK_SIZE) {
+  if (id < file_size_ / STDB_BLOCK_SIZE) {
     auto pvol = get_volref(double_write_buffer_.data(), id);
     u32 gen = pvol->generation;
     return std::make_tuple(common::Status::Ok(), gen);
@@ -352,20 +352,20 @@ std::tuple<common::Status, u32> MetaVolume::get_generation(u32 id) const {
 }
 
 common::Status MetaVolume::add_volume(u32 id, u32 capacity, const std::string& path) {
-  if (path.size() > FASTSTDB_BLOCK_SIZE - sizeof(VolumeRef)) {
+  if (path.size() > STDB_BLOCK_SIZE - sizeof(VolumeRef)) {
     return common::Status::BadArg("");
   }
 
   size_t old_size = double_write_buffer_.size();
-  double_write_buffer_.resize(old_size + FASTSTDB_BLOCK_SIZE);
-  file_size_ += FASTSTDB_BLOCK_SIZE;
+  double_write_buffer_.resize(old_size + STDB_BLOCK_SIZE);
+  file_size_ += STDB_BLOCK_SIZE;
   u8* block = double_write_buffer_.data() + old_size;
   VolumeRef* pvolume  = reinterpret_cast<VolumeRef*>(block);
   pvolume->capacity   = capacity;
   pvolume->generation = id;
   pvolume->id         = id;
   pvolume->nblocks    = 0;
-  pvolume->version    = FASTSTDB_VERSION;
+  pvolume->version    = STDB_VERSION;
   memcpy(pvolume->path, path.data(), path.size());
   pvolume->path[path.size()] = '\0';
 
@@ -374,7 +374,7 @@ common::Status MetaVolume::add_volume(u32 id, u32 capacity, const std::string& p
   vol.nblocks         = pvolume->nblocks;
   vol.generation      = pvolume->generation;
   vol.capacity        = pvolume->capacity;
-  vol.version         = FASTSTDB_VERSION;
+  vol.version         = STDB_VERSION;
   vol.id              = pvolume->id;
   vol.path            = path;
 
@@ -384,7 +384,7 @@ common::Status MetaVolume::add_volume(u32 id, u32 capacity, const std::string& p
 }
 
 common::Status MetaVolume::update(u32 id, u32 nblocks, u32 capacity, u32 gen) {
-  if (id < file_size_ / FASTSTDB_BLOCK_SIZE) {
+  if (id < file_size_ / STDB_BLOCK_SIZE) {
     auto pvol        = get_volref(double_write_buffer_.data(), id);
     pvol->nblocks    = nblocks;
     pvol->capacity   = capacity;
@@ -407,7 +407,7 @@ common::Status MetaVolume::update(u32 id, u32 nblocks, u32 capacity, u32 gen) {
 }
 
 common::Status MetaVolume::set_nblocks(u32 id, u32 nblocks) {
-  if (id < file_size_ / FASTSTDB_BLOCK_SIZE) {
+  if (id < file_size_ / STDB_BLOCK_SIZE) {
     auto pvol = get_volref(double_write_buffer_.data(), id);
     pvol->nblocks = nblocks;
 
@@ -426,7 +426,7 @@ common::Status MetaVolume::set_nblocks(u32 id, u32 nblocks) {
 }
 
 common::Status MetaVolume::set_capacity(u32 id, u32 cap) {
-  if (id < file_size_ / FASTSTDB_BLOCK_SIZE) {
+  if (id < file_size_ / STDB_BLOCK_SIZE) {
     auto pvol = get_volref(double_write_buffer_.data(), id);
     pvol->capacity = cap;
 
@@ -445,7 +445,7 @@ common::Status MetaVolume::set_capacity(u32 id, u32 cap) {
 }
 
 common::Status MetaVolume::set_generation(u32 id, u32 gen) {
-  if (id < file_size_ / FASTSTDB_BLOCK_SIZE) {
+  if (id < file_size_ / STDB_BLOCK_SIZE) {
     auto pvol = get_volref(double_write_buffer_.data(), id);
     pvol->generation = gen;
 
@@ -481,7 +481,7 @@ static std::unique_ptr<common::MMapFile> GetMMapFile(const char* path) {
 
 void CreateMMapFile(const char* path, u64 capacity) {
   std::unique_ptr<common::MMapFile> mmapFile(new common::MMapFile());
-  mmapFile->Init(path, capacity * FASTSTDB_BLOCK_SIZE);
+  mmapFile->Init(path, capacity * STDB_BLOCK_SIZE);
 }
 
 Volume::Volume(const char* path, size_t write_pos) :
@@ -490,7 +490,7 @@ Volume::Volume(const char* path, size_t write_pos) :
     mmap_ptr_(nullptr) {
   mmap_ = GetMMapFile(path);
   mmap_ptr_ = reinterpret_cast<u8*>(mmap_->GetBase());
-  file_size_ = mmap_->GetMmapSize() / FASTSTDB_BLOCK_SIZE;
+  file_size_ = mmap_->GetMmapSize() / STDB_BLOCK_SIZE;
 }
 
 void Volume::reset() {
@@ -516,8 +516,8 @@ std::tuple<common::Status, BlockAddr> Volume::append_block(const u8* source) {
             " file_size_=" + std::to_string(file_size_)), 0u);
   }
 
-  auto offset = write_pos_ * FASTSTDB_BLOCK_SIZE;
-  memcpy(mmap_ptr_ + offset, source, FASTSTDB_BLOCK_SIZE);
+  auto offset = write_pos_ * STDB_BLOCK_SIZE;
+  memcpy(mmap_ptr_ + offset, source, STDB_BLOCK_SIZE);
   auto result = write_pos_++;
   return std::make_tuple(common::Status::Ok(), result);
 }
@@ -531,7 +531,7 @@ std::tuple<common::Status, BlockAddr> Volume::append_block(const IOVecBlock *sou
             " file_size_=" + std::to_string(file_size_)), 0u);
   }
 
-  auto seek_off = write_pos_ * FASTSTDB_BLOCK_SIZE;
+  auto seek_off = write_pos_ * STDB_BLOCK_SIZE;
   auto fd = mmap_->fd();
   if (lseek(fd, seek_off, SEEK_SET) < 0) {
     return std::make_tuple(
@@ -552,7 +552,7 @@ std::tuple<common::Status, BlockAddr> Volume::append_block(const IOVecBlock *sou
   }
 
   auto size = writev(fd, vec, nvec);
-  if (size != FASTSTDB_BLOCK_SIZE) {
+  if (size != STDB_BLOCK_SIZE) {
     return std::make_tuple(common::Status::FileWriteError(strerror(errno)), 0u);
   }
   auto result = write_pos_++;
@@ -566,8 +566,8 @@ common::Status Volume::read_block(u32 ix, u8* dest) const {
         "ix=" + std::to_string(ix) +
         " write_pos_=" + std::to_string(write_pos_));
   }
-  u64 offset = ix * FASTSTDB_BLOCK_SIZE;
-  memcpy(dest, mmap_ptr_ + offset, FASTSTDB_BLOCK_SIZE);
+  u64 offset = ix * STDB_BLOCK_SIZE;
+  memcpy(dest, mmap_ptr_ + offset, STDB_BLOCK_SIZE);
   return common::Status::Ok();
 }
 
@@ -577,7 +577,7 @@ std::tuple<common::Status, std::unique_ptr<IOVecBlock>> Volume::read_block(u32 i
   
   u8* data = block->get_data(0);
   u32 size = block->get_size(0);
-  if (size != FASTSTDB_BLOCK_SIZE) {
+  if (size != STDB_BLOCK_SIZE) {
     return std::make_tuple(common::Status::BadArg(""), std::move(block));
   }
   auto status = read_block(ix, data);
@@ -591,7 +591,7 @@ std::tuple<common::Status, const u8*> Volume::read_block_zero_copy(u32 ix) const
             "ix=" + std::to_string(ix) +
             " write_pos_=" + std::to_string(write_pos_)), nullptr);
   }
-  u64 offset = ix * FASTSTDB_BLOCK_SIZE;
+  u64 offset = ix * STDB_BLOCK_SIZE;
   auto ptr = mmap_ptr_ + offset;
   return std::make_tuple(common::Status::Ok(), ptr);
 }
