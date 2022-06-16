@@ -994,10 +994,8 @@ std::tuple<common::Status, std::vector<ParamId>, ErrorMsg> QueryParser::parse_se
   }
 
   std::vector<std::string> metrics;
-  if (name.length() > 10 && boost::starts_with(name, "meta:names")) {
-    boost::erase_first(name, "meta:names:");
-    metrics.push_back(name);
-  }
+  boost::erase_first(name, "meta:names");
+  metrics.push_back(name);
 
   std::tie(status, ids, error) = parse_where_clause(ptree, metrics, matcher);
   if (status != common::Status::Ok()) {
@@ -1404,7 +1402,7 @@ std::tuple<common::Status, ReshapeRequest, ErrorMsg> QueryParser::parse_select_e
   result.agg.enabled = false;
   result.select.begin = ts_begin;
   result.select.end = ts_end;
-  result.select.columns.push_back(Column{ids});
+  result.select.columns.push_back(Column{ ids });
 
   result.order_by = order;
 
