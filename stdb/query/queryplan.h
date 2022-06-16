@@ -20,7 +20,7 @@ namespace qp {
 struct IQueryPlan {
   virtual ~IQueryPlan() = default;
 
-  virtual std::string debug_string() const = 0;
+  virtual boost::property_tree::ptree debug_info() const = 0;
 
   /**
    * Execute query plan.

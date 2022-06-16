@@ -61,7 +61,11 @@ TEST(TestQueryPlan, Test_1) {
   std::unique_ptr<qp::IQueryPlan> query_plan;
   std::tie(status, query_plan) = qp::QueryPlanBuilder::create(req);
   EXPECT_TRUE(status.IsOk());
-  LOG(INFO) << "query plan debug_string:" << query_plan->debug_string();
+  LOG(INFO) << "query plan debug_string:" << to_json(query_plan->debug_info());
+}
+
+TEST(TestQueryPlan, Test_2) {
+  init_series_matcher();
 }
 
 }  // namespace qp
