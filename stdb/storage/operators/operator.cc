@@ -217,18 +217,20 @@ std::string ValueFilter::debug_string() const {
   auto rank = get_rank();
 
   if (mask & (1 << GT)) {
-    ss << "gt:" << thresholds[GT];
+    ss << "(" << thresholds[GT];
+  } else if (mask & (1 << GE)) {
+    ss << "[" << thresholds[GE];
+  } else {
+    ss << "[-";
   }
-  if (mask & (1 << GE)) {
-    ss << "ge:" << thresholds[GE];
-  }
-  if (rank > 1) ss << "\n";
+  if (rank > 1) ss << ", ";
 
   if (mask & (1 << LT)) {
-    ss << "lt:" << thresholds[LT];
-  }
-  if (mask & (1 << LE)) {
-    ss << "le:" << thresholds[LE];
+    ss << thresholds[LT] << ")";
+  } else if (mask & (1 << LE)) {
+    ss << thresholds[LE] << "]";
+  } else {
+    ss << "-]";
   }
   return ss.str();
 }

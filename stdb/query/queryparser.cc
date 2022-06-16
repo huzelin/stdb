@@ -739,7 +739,7 @@ static std::tuple<common::Status, std::vector<ParamId>, ErrorMsg> parse_where_cl
   return std::make_tuple(status, output, ErrorMsg());
 }
 
-static std::string to_json(boost::property_tree::ptree const& ptree, bool pretty_print = true) {
+std::string to_json(boost::property_tree::ptree const& ptree, bool pretty_print) {
   std::stringstream ss;
   boost::property_tree::write_json(ss, ptree, pretty_print);
   return ss.str();

@@ -29,8 +29,8 @@ struct ProcessingPrelude {
   virtual common::Status extract_result(std::vector<std::unique_ptr<AggregateOperator>>* dest) = 0;
   //! Get result of the processing step
   virtual common::Status extract_result(std::vector<std::unique_ptr<BinaryDataOperator>>* dest) = 0;
-  //! Get name of the processing step
-  virtual std::string debug_string() const = 0;
+  //! Get debug info of the processing step
+  virtual boost::property_tree::ptree debug_info() const = 0;
 };
 
 /**
@@ -49,9 +49,9 @@ struct MaterializationStep {
   virtual common::Status extract_result(std::unique_ptr<ColumnMaterializer>* dest) = 0;
 
   /**
-   * Get the name of MaterializationStep
+   * Get the debug info of MaterializationStep
    */
-  virtual std::string debug_string() const = 0;
+  virtual boost::property_tree::ptree debug_info() const = 0;
 };
 
 struct ScanProcessingStep : ProcessingPrelude {
@@ -68,10 +68,10 @@ struct ScanProcessingStep : ProcessingPrelude {
   {
   }
 
-  std::string debug_string() const override {
-    std::stringstream ss;
-    ss << "ScanProcessingStep";
-    return ss.str();
+  boost::property_tree::ptree debug_info() const override {
+    boost::property_tree::ptree tree;
+    tree.add("name", "ScanProcessingStep");
+    return tree;
   }
 
   virtual common::Status apply(const ColumnStore& cstore) {
@@ -121,10 +121,10 @@ struct ScanEventsProcessingStep : ProcessingPrelude {
   {
   }
 
-  std::string debug_string() const override {
-    std::stringstream ss;
-    ss << "ScanEventsProcessingStep";
-    return ss.str();
+  boost::property_tree::ptree debug_info() const override {
+    boost::property_tree::ptree tree;
+    tree.add("name", "ScanEventsProcessingStep");
+    return tree;
   }
 
   virtual common::Status apply(const ColumnStore& cstore) {
@@ -175,24 +175,22 @@ struct FilterProcessingStep : ProcessingPrelude {
     }
   }
 
-  std::string debug_string() const override {
-    std::stringstream ss;
-    ss << "name: FilterProcessingStep\n";
-    ss << "begin: " << begin_ << "\n";
-    ss << "end:" << end_ << "\n";
+  boost::property_tree::ptree debug_info() const override {
+    boost::property_tree::ptree tree;
+    tree.add("name", "FilterProcessingStep");
+    tree.add("begin", begin_);
+    tree.add("end", end_);
 
-    ss << "ids: [\n";
-    if (ids_.size() > 0) {
-      for (auto id : ids_) {
-        ss << "{\n";
-        ss << "id:" << id << " \n";
-        auto iter = filters_.find(id);
-        ss << "filter: {\n" << iter->second.debug_string() << "\n}\n";
-        ss << "}\n";
-      }
+    boost::property_tree::ptree array;
+    for (auto id : ids_) {
+      boost::property_tree::ptree elem;
+      elem.add("id", id);
+      auto iter = filters_.find(id);
+      elem.add("filter", iter->second.debug_string());
+      array.push_back(boost::property_tree::ptree::value_type("", elem));
     }
-    ss << "]";
-    return ss.str();
+    tree.add_child("ids", array);
+    return tree;
   }
 
   virtual common::Status apply(const ColumnStore& cstore) {
@@ -230,10 +228,10 @@ struct AggregateProcessingStep : ProcessingPrelude {
   {
   }
 
-  std::string debug_string() const override {
-    std::stringstream ss;
-    ss << "AggregateProcessingStep";
-    return ss.str();
+  boost::property_tree::ptree debug_info() const override {
+    boost::property_tree::ptree tree;
+    tree.add("name", "AggregateProcessingStep");
+    return tree;
   }
 
   virtual common::Status apply(const ColumnStore& cstore) {
@@ -264,12 +262,8 @@ class GroupAggregateConverter : public RealValuedOperator {
   AggregationFunction func_;
  
  public:
-
   GroupAggregateConverter(AggregationFunction func, std::unique_ptr<AggregateOperator> op)
-      : op_(std::move(op))
-        , func_(func)
-  {
-  }
+      : op_(std::move(op)), func_(func) { }
 
   std::tuple<common::Status, size_t> read(Timestamp *destts, double *destval, size_t size) override {
     size_t pos = 0;
@@ -314,14 +308,12 @@ struct GroupAggregateProcessingStep : ProcessingPrelude {
         , end_(end)
         , step_(step)
         , ids_(std::forward<T>(t))
-        , fn_(fn)
-  {
-  }
+        , fn_(fn) { }
 
-  std::string debug_string() const override {
-    std::stringstream ss;
-    ss << "GroupAggregateProcessingStep";
-    return ss.str();
+  boost::property_tree::ptree debug_info() const override {
+    boost::property_tree::ptree tree;
+    tree.add("name", "GroupAggregateProcessingStep");
+    return tree;
   }
 
   virtual common::Status apply(const ColumnStore& cstore) {
@@ -384,10 +376,10 @@ struct GroupAggregateFilterProcessingStep : ProcessingPrelude {
     }
   }
 
-  std::string debug_string() const override {
-    std::stringstream ss;
-    ss << "GroupAggregateFilterProcessingStep";
-    return ss.str();
+  boost::property_tree::ptree debug_info() const override {
+    boost::property_tree::ptree tree;
+    tree.add("name", "GroupAggregateFilterProcessingStep");
+    return tree;
   }
 
   virtual common::Status apply(const ColumnStore& cstore) {
@@ -461,15 +453,27 @@ struct MergeBy : MaterializationStep {
   std::unique_ptr<ColumnMaterializer> mat_;
 
   template<class IdVec>
-  MergeBy(IdVec&& ids)
-      : ids_(std::forward<IdVec>(ids))
-  {
-  }
+  MergeBy(IdVec&& ids) : ids_(std::forward<IdVec>(ids)) { }
 
-  std::string debug_string() const override {
-    std::stringstream ss;
-    ss << "MergeBy";
-    return ss.str();
+  boost::property_tree::ptree debug_info() const override {
+    boost::property_tree::ptree tree;
+    tree.add("name", "MergeBy");
+    boost::property_tree::ptree array;
+    for (auto id : ids_) {
+      boost::property_tree::ptree elem;
+      elem.add("id", id);
+      array.push_back(boost::property_tree::ptree::value_type("", elem));
+    }
+    tree.add_child("ids", array);
+    switch (order) {
+      case OrderBy::SERIES: {
+        tree.add("order", "SERIES");
+      } break;
+      case OrderBy::TIME: {
+        tree.add("orderby", "TIME");
+      } break;
+    }
+    return tree;
   }
 
   common::Status apply(ProcessingPrelude* prelude) {
@@ -517,10 +521,10 @@ struct Chain : MaterializationStep {
   template<class IdVec>
   Chain(IdVec&& vec) : ids_(std::forward<IdVec>(vec)) { }
 
-  std::string debug_string() const override {
-    std::stringstream ss;
-    ss << "Chain";
-    return ss.str();
+  boost::property_tree::ptree debug_info() const override {
+    boost::property_tree::ptree tree;
+    tree.add("name", "Chain");
+    return tree;
   }
 
   common::Status apply(ProcessingPrelude *prelude) {
@@ -557,14 +561,12 @@ struct Aggregate : MaterializationStep {
   template<class IdVec, class FuncVec>
   Aggregate(IdVec&& vec, FuncVec&& fn)
      : ids_(std::forward<IdVec>(vec))
-      , fn_(std::forward<FuncVec>(fn))
-  {
-  }
+      , fn_(std::forward<FuncVec>(fn)) { }
 
-  std::string debug_string() const override {
-    std::stringstream ss;
-    ss << "Aggregate";
-    return ss.str();
+  boost::property_tree::ptree debug_info() const override {
+    boost::property_tree::ptree tree;
+    tree.add("name", "Aggregate");
+    return tree;
   }
 
   common::Status apply(ProcessingPrelude *prelude) {
@@ -600,14 +602,12 @@ struct AggregateCombiner : MaterializationStep {
   template <class IdVec, class FuncVec>
   AggregateCombiner(IdVec&& vec, FuncVec&& fn)
       : ids_(std::forward<IdVec>(vec))
-        , fn_(std::forward<FuncVec>(fn))
-  {
-  }
+        , fn_(std::forward<FuncVec>(fn)) { }
 
-  std::string debug_string() const override {
-    std::stringstream ss;
-    ss << "AggregateCombiner";
-    return ss.str();
+  boost::property_tree::ptree debug_info() const override {
+    boost::property_tree::ptree tree;
+    tree.add("name", "AggregateCombiner");
+    return tree;
   }
 
   common::Status apply(ProcessingPrelude *prelude) {
@@ -696,14 +696,12 @@ struct GroupAggregateCombiner : MaterializationStep {
   template<class IdVec, class FuncVec>
   GroupAggregateCombiner(IdVec&& vec, FuncVec&& fn)
         : ids_(std::forward<IdVec>(vec))
-        , fn_(std::forward<FuncVec>(fn))
-  {
-  }
+        , fn_(std::forward<FuncVec>(fn)) { }
 
-  std::string debug_string() const override {
-    std::stringstream ss;
-    ss << "GroupAggregateCombiner";
-    return ss.str();
+  boost::property_tree::ptree debug_info() const override {
+    boost::property_tree::ptree tree;
+    tree.add("name", "GroupAggregateCombiner");
+    return tree;
   }
 
   common::Status apply(ProcessingPrelude *prelude) {
@@ -762,14 +760,12 @@ struct Join : MaterializationStep {
         , cardinality_(cardinality)
         , order_(order)
         , begin_(begin)
-        , end_(end)
-  {
-  }
+        , end_(end) { }
 
-  std::string debug_string() const override {
-    std::stringstream ss;
-    ss << "Join";
-    return ss.str();
+  boost::property_tree::ptree debug_info() const override {
+    boost::property_tree::ptree tree;
+    tree.add("name", "Join");
+    return tree;
   }
 
   common::Status apply(ProcessingPrelude *prelude) {
@@ -826,14 +822,12 @@ struct SeriesOrderAggregate : MaterializationStep {
   template <class IdVec, class FnVec>
   SeriesOrderAggregate(IdVec&& vec, FnVec&& fn)
         : ids_(std::forward<IdVec>(vec))
-        , fn_(std::forward<FnVec>(fn))
-  {
-  }
+        , fn_(std::forward<FnVec>(fn)) { }
 
-  std::string debug_string() const override {
-    std::stringstream ss;
-    ss << "SeriesOrderAggregate";
-    return ss.str();
+  boost::property_tree::ptree debug_info() const override {
+    boost::property_tree::ptree tree;
+    tree.add("name", "SeriesOrderAggregate");
+    return tree;
   }
 
   common::Status apply(ProcessingPrelude *prelude) {
@@ -863,14 +857,12 @@ struct TimeOrderAggregate : MaterializationStep {
   template<class IdVec, class FnVec>
   TimeOrderAggregate(IdVec&& vec, FnVec&& fn)
         : ids_(std::forward<IdVec>(vec))
-        , fn_(std::forward<FnVec>(fn))
-  {
-  }
+        , fn_(std::forward<FnVec>(fn)) { }
 
-  std::string debug_string() const {
-    std::stringstream ss;
-    ss << "TimeOrderAggregate";
-    return ss.str();
+  boost::property_tree::ptree debug_info() const {
+    boost::property_tree::ptree tree;
+    tree.add("name", "TimeOrderAggregate");
+    return tree;
   }
 
   common::Status apply(ProcessingPrelude *prelude) {
@@ -900,20 +892,14 @@ struct TwoStepQueryPlan : IQueryPlan {
   template<class T1, class T2>
   TwoStepQueryPlan(T1&& t1, T2&& t2)
         : prelude_(std::forward<T1>(t1))
-        , mater_(std::forward<T2>(t2))
-  {
-  }
+        , mater_(std::forward<T2>(t2)) { }
 
-  std::string debug_string() const {
-    std::stringstream ss;
-    ss << "QueryPlan Name: TwoStepQueryPlan\n";
-    ss << "ProcessingPrelude: {\n";
-    ss << prelude_->debug_string() << "\n";
-    ss << "}\n";
-    ss << "MaterializationStep:{\n";
-    ss << mater_->debug_string() << "\n";
-    ss << "}\n";
-    return ss.str();
+  boost::property_tree::ptree debug_info() const override {
+    boost::property_tree::ptree tree;
+    tree.add("name", "TwoStepQueryPlan");
+    tree.add_child("processing_prelude", prelude_->debug_info());
+    tree.add_child("materialization_step", mater_->debug_info());
+    return tree;
   }
 
   common::Status execute(const ColumnStore &cstore) {

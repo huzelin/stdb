@@ -24,6 +24,8 @@ enum class QueryKind {
   SELECT_EVENTS,
 };
 
+extern std::string to_json(boost::property_tree::ptree const& ptree, bool pretty_print = true);
+
 class SeriesRetreiver {
   std::vector<std::string> metric_;
   std::map<std::string, std::vector<std::string>> tags_;
