@@ -11,16 +11,16 @@
  */
 typedef struct {
   //! Max size of the input-log volume
-  u64 input_log_volume_size;
+  u64 input_log_volume_size = 1UL * 1024 * 1024 * 1024;
 
   //! Number of volumes to keep
-  u64 input_log_volume_numb;
+  u64 input_log_volume_numb = 4;
 
   //! Input log max concurrency
-  u32 input_log_concurrency;
+  u32 input_log_concurrency = 2;
 
   //! Path to input log root directory
-  const char* input_log_path;
+  const char* input_log_path = "/data/input_log";
 
 } FineTuneParams;
 

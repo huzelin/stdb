@@ -71,7 +71,7 @@ MetadataStorage::MetadataStorage(const char* db)
   apr_dbd_t *handle = nullptr;
   status = apr_dbd_open(driver_, pool, db, &handle);
   if (status != APR_SUCCESS) {
-    LOG(FATAL) << "Can't open database, check file path";
+    LOG(FATAL) << "Can't open database, check file path:" << db;
   }
   handle_ = HandleT(handle, AprHandleDeleter(driver_));
 

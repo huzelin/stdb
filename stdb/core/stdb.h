@@ -122,7 +122,7 @@ EXPORT int stdb_create_database_ex(const char* base_file_name, const char* metad
  * @param logger
  * @returns status
  */
-EXPORT int remove_database(const char* file_name, const char* wal_path, bool force);
+EXPORT int stdb_remove_database(const char* file_name, const char* wal_path, bool force);
 
 
 /** Open recenlty create storage.
@@ -130,19 +130,19 @@ EXPORT int remove_database(const char* file_name, const char* wal_path, bool for
   * @param parameters open parameters
   * @return pointer to new db instance, null if db doesn't exists.
   */
-EXPORT Database* open_database(const char* path, FineTuneParams parameters);
+EXPORT Database* stdb_open_database(const char* path, FineTuneParams parameters);
 
 
 //! Close database. Free resources.
-EXPORT void close_database(Database* db);
+EXPORT void stdb_close_database(Database* db);
 
 
 //-----------
 // Ingestion
 //-----------
-EXPORT Session* create_session(Database* db);
+EXPORT Session* stdb_create_session(Database* db);
 
-EXPORT void destroy_session(Session* stream);
+EXPORT void stdb_destroy_session(Session* stream);
 
 //---------
 // Parsing
@@ -153,7 +153,7 @@ EXPORT void destroy_session(Session* stream);
  * @param sample is an output parameter
  * @returns SUCCESS on success, EBAD_ARG otherwise
  */
-EXPORT int parse_timestamp(const char* iso_str, Sample* sample);
+EXPORT int stdb_parse_timestamp(const char* iso_str, Sample* sample);
 
 /** Convert series name to id. Assign new id to series name on first encounter.
  * @param ist is an opened ingestion stream
@@ -162,8 +162,8 @@ EXPORT int parse_timestamp(const char* iso_str, Sample* sample);
  * @param sample is an output parameter
  * @returns SUCCESS on success, error code otherwise
  */
-EXPORT int series_to_param_id(Session* ist, const char* begin, const char* end,
-                       Sample* sample);
+EXPORT int stdb_series_to_param_id(Session* ist, const char* begin, const char* end,
+                                   Sample* sample);
 
 /**
   * Convert series name to id or list of ids (if metric name is composed from several metric names e.g. foo|bar)
@@ -175,15 +175,14 @@ EXPORT int series_to_param_id(Session* ist, const char* begin, const char* end,
   * @return number of elemnts stored in the out_ids array (can be less then out_ids_cap) or -1*number_of_series
   *         if dest is too small.
   */
-EXPORT int name_to_param_id_list(Session* ist, const char* begin, const char* end,
-                                         ParamId* out_ids, u32 out_ids_cap);
+EXPORT int stdb_name_to_param_id_list(Session* ist, const char* begin, const char* end,
+                                      ParamId* out_ids, u32 out_ids_cap);
 /** Try to parse duration.
   * @param str should point to the begining of the string
   * @param value is an output parameter
   * @returns SUCCESS on success, EBAD_ARG otherwise
   */
-EXPORT int parse_duration(const char* str, int* value);
-
+EXPORT int stdb_parse_duration(const char* str, int* value);
 
 //---------
 // Writing
@@ -196,15 +195,15 @@ EXPORT int parse_duration(const char* str, int* value);
  * @param value parameter value
  * @returns operation status
  */
-EXPORT int write_double_raw_sample(Session* session, ParamId param_id,
-                                   Timestamp timestamp,  double value);
+EXPORT int stdb_write_double_raw_sample(Session* session, ParamId param_id,
+                                        Timestamp timestamp,  double value);
 
 /** Write measurement to DB
  * @param ist is an opened ingestion stream
  * @param sample should contain valid measurement value
  * @returns operation status
  */
-EXPORT int write_sample(Session* ist, const Sample* sample);
+EXPORT int stdb_write_sample(Session* ist, const Sample* sample);
 
 
 //---------
@@ -216,27 +215,27 @@ EXPORT int write_sample(Session* ist, const Sample* sample);
  * @param query should contain valid query
  * @return cursor instance
  */
-EXPORT Cursor* query(Session* session, const char* query);
+EXPORT Cursor* stdb_query(Session* session, const char* query);
 
 /** @brief Suggest query
  * @param sesson should point to opened session instance
  * @param query should contain valid query
  * @return cursor instance
  */
-EXPORT Cursor* suggest(Session* session, const char* query);
+EXPORT Cursor* stdb_suggest(Session* session, const char* query);
 
 /** @brief Search query
  * @param sesson should point to opened session instance
  * @param query should contain valid query
  * @return cursor instance
  */
-EXPORT Cursor* search(Session* session, const char* query);
+EXPORT Cursor* stdb_search(Session* session, const char* query);
 
 /**
  * @brief Close cursor
  * @param pcursor pointer to cursor
  */
-EXPORT void cursor_close(Cursor* pcursor);
+EXPORT void stdb_cursor_close(Cursor* pcursor);
 
 /** Read the values under cursor.
  * @param cursor should point to active cursor instance
@@ -244,25 +243,25 @@ EXPORT void cursor_close(Cursor* pcursor);
  * @param dest_size is an output buffer size
  * @returns number of overwriten bytes
  */
-EXPORT size_t cursor_read(Cursor* cursor, void* dest, size_t dest_size);
+EXPORT size_t stdb_cursor_read(Cursor* cursor, void* dest, size_t dest_size);
 
 //! Check cursor state. Returns zero value if not done yet, non zero value otherwise.
-EXPORT int cursor_is_done(Cursor* pcursor);
+EXPORT int stdb_cursor_is_done(Cursor* pcursor);
 
 //! Check cursor error state. Returns zero value if everything is OK, non zero value otherwise.
-EXPORT int cursor_is_error(Cursor* pcursor);
+EXPORT int stdb_cursor_is_error(Cursor* pcursor);
 
 /**
  * Check cursor error state and error message.
  * Returns zero value if everything is OK, non zero value otherwise.
  */
-EXPORT int cursor_is_error_ex(Cursor*  pcursor,
-                              const char** error_message);
+EXPORT int stdb_cursor_is_error_ex(Cursor*  pcursor,
+                                   const char** error_message);
 
 /** Convert timestamp to string if possible, return string length
  * @return 0 on bad string, -LEN if buffer is too small, LEN on success
  */
-EXPORT int timestamp_to_string(Timestamp, char* buffer, size_t buffer_size);
+EXPORT int stdb_timestamp_to_string(Timestamp, char* buffer, size_t buffer_size);
 
 /** Convert param-id to series name
  * @param session
@@ -271,37 +270,22 @@ EXPORT int timestamp_to_string(Timestamp, char* buffer, size_t buffer_size);
  * @param buffer_size is a destination buffer size
  * @return 0 if no such id, -LEN if buffer is too small, LEN on success
  */
-EXPORT int param_id_to_series(Session* session, ParamId id, char* buffer,
-                              size_t buffer_size);
+EXPORT int stdb_param_id_to_series(Session* session, ParamId id, char* buffer,
+                                   size_t buffer_size);
 
 //--------------------
 // Stats and counters
 //--------------------
+EXPORT int stdb_json_stats(Database* db, char* buffer, size_t size);
 
-/** DEPRICATED
- * Get search counters.
- * @param rcv_stats pointer to `SearchStats` structure that will be filled with data.
- * @param reset reset all counter if not zero
- */
-EXPORT void global_search_stats(SearchStats* rcv_stats, int reset);
-
-/** DEPRICATED
- * Get storage stats.
- * @param db database instance.
- * @param rcv_stats pointer to destination
- */
-EXPORT void global_storage_stats(Database* db, StorageStats* rcv_stats);
-
-EXPORT void debug_print(Database* db);
-
-EXPORT int json_stats(Database* db, char* buffer, size_t size);
+EXPORT void stdb_debug_print(Database* db);
 
 /** Get global resource value by name
 */
-EXPORT int get_resource(const char* res_name, char* buf, size_t* bufsize);
+EXPORT int stdb_get_resource(const char* res_name, char* buf, size_t* bufsize);
 
-EXPORT int debug_report_dump(const char* path2db, const char* outfile);
+EXPORT int stdb_debug_report_dump(const char* path2db, const char* outfile);
 
-EXPORT int debug_recovery_report_dump(const char* path2db, const char* outfile);
+EXPORT int stdb_debug_recovery_report_dump(const char* path2db, const char* outfile);
 
 #endif  // STDB_STDB_H_
