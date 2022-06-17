@@ -69,6 +69,9 @@ void insert_series_data(const char* series) {
 }
 
 void init_mock_data() {
+  static bool inited = false;
+  if (inited) return;
+
   {
     const char* series = "test1 name=a val=1";
     insert_series_data(series);
@@ -81,7 +84,7 @@ void init_mock_data() {
     const char* series = "test3 name=b val=3";
     insert_series_data(series);
   }
-  LOG(INFO) << "----------------init_mock_data";
+  inited = true;
 }
 
 TEST(TestSTDB, name_to_param_id_list) {
