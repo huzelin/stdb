@@ -53,34 +53,65 @@ TEST(TestSTDB, parseTimestamp) {
   EXPECT_EQ(expected, sample.timestamp);
 }
 
+void insert_series_data(const char* series) {
+  FineTuneParams fine_tune_params;
+  auto database = stdb_open_database("./metas/test.stdb", fine_tune_params);
+  auto session = stdb_create_session(database);
+
+  Sample sample;
+  for (auto i = 0; i < 1000; ++i) {
+    stdb_series_to_param_id(session, series, series + strlen(series), &sample);
+    sample.timestamp = 20000000 + i * 10000;
+    stdb_write_sample(session, &sample);
+  }
+  stdb_destroy_session(session);
+  stdb_close_database(database);
+}
+
+void init_mock_data() {
+  {
+    const char* series = "test1 name=a val=1";
+    insert_series_data(series);
+  }
+  {
+    const char* series = "test2 name=a val=1";
+    insert_series_data(series);
+  }
+  {
+    const char* series = "test3 name=b val=3";
+    insert_series_data(series);
+  }
+  LOG(INFO) << "----------------init_mock_data";
+}
+
 TEST(TestSTDB, name_to_param_id_list) {
+  init_mock_data();
+
   FineTuneParams fine_tune_params;
   auto database = stdb_open_database("./metas/test.stdb", fine_tune_params);
 
   auto session = stdb_create_session(database);
-  
+
+  char buf[8192];
+  stdb_json_stats(database, buf, 8192);
+  LOG(INFO) << buf;
+
   {
     const char* series = "test1 name=a val=1";
     Sample sample;
-    sample.timestamp = 2000;
     stdb_series_to_param_id(session, series, series + strlen(series), &sample);
-    LOG(INFO) << "sample id=" << sample.paramid;
     EXPECT_EQ(1024, sample.paramid);
-
-    stdb_write_sample(session, &sample);
   }
   {
     const char* series = "test2 name=a val=1";
     Sample sample;
     stdb_series_to_param_id(session, series, series + strlen(series), &sample);
-    LOG(INFO) << "sample id=" << sample.paramid;
     EXPECT_EQ(1025, sample.paramid);
   }
   {
     const char* series = "test3 name=b val=3";
     Sample sample;
     stdb_series_to_param_id(session, series, series + strlen(series), &sample);
-    LOG(INFO) << "sample id=" << sample.paramid;
     EXPECT_EQ(1026, sample.paramid);
   }
 
@@ -89,7 +120,7 @@ TEST(TestSTDB, name_to_param_id_list) {
 }
 
 TEST(TestSTDB, query) {
-
+  
 }
 
 TEST(TestSTDB, suggest) {
