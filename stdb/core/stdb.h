@@ -84,13 +84,13 @@ typedef struct {
 /**
  * initialize
  */
-void initialize();
+void stdb_initialize();
 
 /** Convert error code to error message.
  * Function returns pointer to statically allocated string
  * there is no need to free it.
  */
-const char* error_message(int error_code);
+const char* stdb_error_message(int error_code);
 
 //------------------------------
 // Storage management functions
@@ -103,8 +103,8 @@ const char* error_message(int error_code);
  * @param volumes_path path to volumes
  * @param num_volumes number of volumes to create
  */
-EXPORT int create_database(const char* base_file_name, const char* metadata_path,
-                           const char* volumes_path, i32 num_volumes, bool allocate);
+EXPORT int stdb_create_database(const char* base_file_name, const char* metadata_path,
+                                const char* volumes_path, i32 num_volumes, bool allocate);
 
 /**
  * @brief Creates storage for new test database on the hard drive (smaller size then normal DB)
@@ -113,9 +113,9 @@ EXPORT int create_database(const char* base_file_name, const char* metadata_path
  * @param volumes_path path to volumes
  * @param num_volumes number of volumes to create
  */
-EXPORT int create_database_ex(const char* base_file_name, const char* metadata_path,
-                              const char* volumes_path, i32 num_volumes,
-                              u64 page_size, bool allocate);
+EXPORT int stdb_create_database_ex(const char* base_file_name, const char* metadata_path,
+                                   const char* volumes_path, i32 num_volumes,
+                                   u64 page_size, bool allocate);
 
 /** Remove all volumes.
  * @param file_name

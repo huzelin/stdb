@@ -39,7 +39,7 @@ typedef common::ThreadLocalStore<std::string> ThreadLocalMsg;
 //! Pool for `apr_dbd_init`
 static apr_pool_t* g_dbd_pool = nullptr;
 
-void initialize() {
+void stdb_initialize() {
   // initialize libapr
   apr_initialize();
   // initialize aprdbd
@@ -51,6 +51,13 @@ void initialize() {
   if (status != APR_SUCCESS) {
     LOG(FATAL) << "DBD initialization error";
   }
+
+  const apr_dbd_driver_t* driver = NULL;
+  apr_dbd_t* handle = NULL;
+  auto rv = apr_dbd_get_driver(g_dbd_pool, "sqlite3", &driver);
+  if (rv != APR_SUCCESS) {
+    LOG(FATAL) << "apr dbd has no sqlite3 driver";
+  }
 }
 
 int debug_report_dump(const char* path2db, const char* outfile) {
@@ -61,7 +68,7 @@ int debug_recovery_report_dump(const char* path2db, const char* outfile) {
   return Storage::generate_recovery_report(path2db, outfile).Code();
 }
 
-const char* error_message(int error_code) {
+const char* stdb_error_message(int error_code) {
   *(ThreadLocalMsg::Get()) = common::Status((common::Status::ErrorCode)error_code).ToString();
   return ThreadLocalMsg::Get()->c_str();
 }
@@ -264,23 +271,23 @@ class DatabaseImpl : public Database {
   }
 };
 
-int create_database_ex(const char     *base_file_name,
-                       const char     *metadata_path,
-                       const char     *volumes_path,
-                       i32             num_volumes,
-                       u64             page_size,
-                       bool            allocate) {
+int stdb_create_database_ex(const char     *base_file_name,
+                            const char     *metadata_path,
+                            const char     *volumes_path,
+                            i32             num_volumes,
+                            u64             page_size,
+                            bool            allocate) {
   auto status = Storage::new_database(base_file_name, metadata_path, volumes_path, num_volumes, page_size, allocate);
   return status.Code();
 }
 
-int create_database(const char     *base_file_name,
-                        const char     *metadata_path,
-                        const char     *volumes_path,
-                        i32             num_volumes,
-                        bool            allocate) {
+int stdb_create_database(const char     *base_file_name,
+                         const char     *metadata_path,
+                         const char     *volumes_path,
+                         i32             num_volumes,
+                         bool            allocate) {
   static const u64 vol_size = 4096ull * 1024 * 1024; // pages (4GB total)
-  return create_database_ex(base_file_name, metadata_path, volumes_path, num_volumes, vol_size, allocate);
+  return stdb_create_database_ex(base_file_name, metadata_path, volumes_path, num_volumes, vol_size, allocate);
 }
 
 Database* open_database(const char* path, FineTuneParams parameters) {
