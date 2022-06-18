@@ -28,7 +28,7 @@ TEST(TestSTDB, initialize) {
 }
 
 TEST(TestSTDB, create_database) {
-  stdb_create_database("test", "./metas", "./volumes", 20, true);
+  stdb_create_database_ex("test", "./metas", "./volumes", 1, 4096 * 1024, true);
 }
 
 TEST(TestSTDB, open_database) {
