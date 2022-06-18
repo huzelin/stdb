@@ -8,7 +8,7 @@
 namespace stdb {
 namespace qp {
 
-std::string make_scan_query(Timestamp begin, Timestamp end, OrderBy order) {
+static std::string make_scan_query(Timestamp begin, Timestamp end, OrderBy order) {
   std::stringstream str;
   str << "{ \"select\": \"test\", \"range\": { \"from\": " << "\"" << DateTimeUtil::to_iso_string(begin) << "\"";
   str << ", \"to\": " << "\"" << DateTimeUtil::to_iso_string(end) << "\"" << "},";
@@ -39,7 +39,7 @@ void init_series_matcher() {
   inited = true;
 }
 
-TEST(TestQueryPlan, Test_1) {
+TEST(TestQueryPlan, Test_make_scan_query) {
   init_series_matcher();
 
   std::string query_json = make_scan_query(1136214245999999999ul, 1136215245999999999ul, OrderBy::TIME); 
@@ -66,6 +66,8 @@ TEST(TestQueryPlan, Test_1) {
 
 TEST(TestQueryPlan, Test_2) {
   init_series_matcher();
+
+
 }
 
 }  // namespace qp

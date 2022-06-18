@@ -190,15 +190,15 @@ class Storage : public std::enable_shared_from_this<Storage> {
    * @param metadata_path is a path to metadata storage
    * @param volumes_path is a path to volumes storage
    * @param num_volumes defines how many volumes should be crated
-   * @param page_size is a size of the individual page in bytes
+   * @param volume_size is a size of the volume in bytes
    * @return operation status
    */
-  static common::Status new_database( const char     *base_file_name
-                                     , const char     *metadata_path
-                                     , const char     *volumes_path
-                                     , i32             num_volumes
-                                     , u64             page_size
-                                     , bool            allocate);
+  static common::Status new_database(const char     *base_file_name,
+                                     const char     *metadata_path,
+                                     const char     *volumes_path,
+                                     i32             num_volumes,
+                                     u64             volume_size,
+                                     bool            allocate);
 
   /**
    * @brief Open storage and generate report (dont' modify anything)

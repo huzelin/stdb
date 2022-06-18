@@ -43,3 +43,13 @@ cc_test(
     ":core",
   ],
 )
+
+cc_test(
+  name = "stdb_test",
+  srcs = ["stdb_test.cc"],
+  deps = [
+    "@gtest//:gtest",
+    "@gtest//:gtest_main",
+    ":core",
+  ],
+)

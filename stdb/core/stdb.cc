@@ -39,7 +39,7 @@ typedef common::ThreadLocalStore<std::string> ThreadLocalMsg;
 //! Pool for `apr_dbd_init`
 static apr_pool_t* g_dbd_pool = nullptr;
 
-void initialize() {
+void stdb_initialize() {
   // initialize libapr
   apr_initialize();
   // initialize aprdbd
@@ -51,17 +51,16 @@ void initialize() {
   if (status != APR_SUCCESS) {
     LOG(FATAL) << "DBD initialization error";
   }
+
+  const apr_dbd_driver_t* driver = NULL;
+  apr_dbd_t* handle = NULL;
+  auto rv = apr_dbd_get_driver(g_dbd_pool, "sqlite3", &driver);
+  if (rv != APR_SUCCESS) {
+    LOG(FATAL) << "apr dbd has no sqlite3 driver";
+  }
 }
 
-int debug_report_dump(const char* path2db, const char* outfile) {
-  return Storage::generate_report(path2db, outfile).Code();
-}
-
-int debug_recovery_report_dump(const char* path2db, const char* outfile) {
-  return Storage::generate_recovery_report(path2db, outfile).Code();
-}
-
-const char* error_message(int error_code) {
+const char* stdb_error_message(int error_code) {
   *(ThreadLocalMsg::Get()) = common::Status((common::Status::ErrorCode)error_code).ToString();
   return ThreadLocalMsg::Get()->c_str();
 }
@@ -172,11 +171,11 @@ struct SearchCursorImpl : Cursor {
   }
 };
 
-class FSession : public Session {
+class SessionImpl : public Session {
   std::shared_ptr<StorageSession> session_;
  
  public:
-  FSession(std::shared_ptr<StorageSession> session)
+  SessionImpl(std::shared_ptr<StorageSession> session)
       : session_(session) { }
 
   common::Status series_to_param_id(const char* begin, const char* end, Sample *out_sample) {
@@ -245,7 +244,7 @@ class DatabaseImpl : public Database {
   }
 
   static void free(Session* ptr) {
-    auto pimpl = reinterpret_cast<FSession*>(ptr);
+    auto pimpl = reinterpret_cast<SessionImpl*>(ptr);
     delete pimpl;
   }
 
@@ -255,7 +254,7 @@ class DatabaseImpl : public Database {
 
   Session* create_session() {
     auto disp = storage_->create_write_session();
-    FSession* ptr = new FSession(disp);
+    SessionImpl* ptr = new SessionImpl(disp);
     return static_cast<Session*>(ptr);
   }
 
@@ -264,65 +263,65 @@ class DatabaseImpl : public Database {
   }
 };
 
-int create_database_ex(const char     *base_file_name,
-                       const char     *metadata_path,
-                       const char     *volumes_path,
-                       i32             num_volumes,
-                       u64             page_size,
-                       bool            allocate) {
+int stdb_create_database_ex(const char     *base_file_name,
+                            const char     *metadata_path,
+                            const char     *volumes_path,
+                            i32             num_volumes,
+                            u64             page_size,
+                            bool            allocate) {
   auto status = Storage::new_database(base_file_name, metadata_path, volumes_path, num_volumes, page_size, allocate);
   return status.Code();
 }
 
-int create_database(const char     *base_file_name,
-                        const char     *metadata_path,
-                        const char     *volumes_path,
-                        i32             num_volumes,
-                        bool            allocate) {
+int stdb_create_database(const char     *base_file_name,
+                         const char     *metadata_path,
+                         const char     *volumes_path,
+                         i32             num_volumes,
+                         bool            allocate) {
   static const u64 vol_size = 4096ull * 1024 * 1024; // pages (4GB total)
-  return create_database_ex(base_file_name, metadata_path, volumes_path, num_volumes, vol_size, allocate);
+  return stdb_create_database_ex(base_file_name, metadata_path, volumes_path, num_volumes, vol_size, allocate);
 }
 
-Database* open_database(const char* path, FineTuneParams parameters) {
+Database* stdb_open_database(const char* path, FineTuneParams parameters) {
   return DatabaseImpl::create(path, parameters);
 }
 
-void close_database(Database* db) {
+void stdb_close_database(Database* db) {
   DatabaseImpl::free(db);
 }
 
-int remove_database(const char* file_name, const char* wal_path, bool force) {
+int stdb_remove_database(const char* file_name, const char* wal_path, bool force) {
   auto status = Storage::remove_storage(file_name, wal_path, force);
   return status.Code();
 }
 
-Session* create_session(Database* db) {
+Session* stdb_create_session(Database* db) {
   auto dbi = reinterpret_cast<DatabaseImpl*>(db);
   return dbi->create_session();
 }
 
-void destroy_session(Session* session) {
+void stdb_destroy_session(Session* session) {
   DatabaseImpl::free(session);
 }
 
-int write_double_raw_sample(Session* session, ParamId param_id, Timestamp timestamp,  double value) {
+int stdb_write_double_raw_sample(Session* session, ParamId param_id, Timestamp timestamp,  double value) {
   Sample sample;
   sample.timestamp = timestamp;
   sample.paramid = param_id;
   sample.payload.type = PAYLOAD_FLOAT;
   sample.payload.float64 = value;
-  auto ises = reinterpret_cast<FSession*>(session);
+  auto ises = reinterpret_cast<SessionImpl*>(session);
   auto status = ises->add_sample(sample);
   return status.Code();
 }
 
-int write_sample(Session* session, const Sample* sample) {
-  auto ises = reinterpret_cast<FSession*>(session);
+int stdb_write_sample(Session* session, const Sample* sample) {
+  auto ises = reinterpret_cast<SessionImpl*>(session);
   auto status = ises->add_sample(*sample);
   return status.Code();
 }
 
-int parse_duration(const char* str, int* value) {
+int stdb_parse_duration(const char* str, int* value) {
   try {
     *value = DateTimeUtil::parse_duration(str, strlen(str));
   } catch (...) {
@@ -331,7 +330,7 @@ int parse_duration(const char* str, int* value) {
   return common::Status::kOk;
 }
 
-int parse_timestamp(const char* iso_str, Sample* sample) {
+int stdb_parse_timestamp(const char* iso_str, Sample* sample) {
   try {
     sample->timestamp = DateTimeUtil::from_iso_string(iso_str);
   } catch (...) {
@@ -340,86 +339,78 @@ int parse_timestamp(const char* iso_str, Sample* sample) {
   return common::Status::kOk;
 }
 
-int series_to_param_id(Session* session, const char* begin, const char* end, Sample* sample) {
-  auto ises = reinterpret_cast<FSession*>(session);
+int stdb_series_to_param_id(Session* session, const char* begin, const char* end, Sample* sample) {
+  auto ises = reinterpret_cast<SessionImpl*>(session);
   auto status = ises->series_to_param_id(begin, end, sample);
   return status.Code();
 }
 
-int name_to_param_id_list(Session* ist, const char* begin, const char* end, ParamId* out_ids, u32 out_ids_cap) {
-  auto ises = reinterpret_cast<FSession*>(ist);
+int stdb_name_to_param_id_list(Session* ist, const char* begin, const char* end, ParamId* out_ids, u32 out_ids_cap) {
+  auto ises = reinterpret_cast<SessionImpl*>(ist);
   return ises->name_to_param_id_list(begin, end, out_ids, out_ids_cap);
 }
 
-Cursor* query(Session* session, const char* query) {
-  auto impl = reinterpret_cast<FSession*>(session);
+Cursor* stdb_query(Session* session, const char* query) {
+  auto impl = reinterpret_cast<SessionImpl*>(session);
   auto cursor = impl->query(query);
   return static_cast<Cursor*>(cursor);
 }
 
-Cursor* suggest(Session* session, const char* query) {
-  auto impl = reinterpret_cast<FSession*>(session);
+Cursor* stdb_suggest(Session* session, const char* query) {
+  auto impl = reinterpret_cast<SessionImpl*>(session);
   auto cursor = impl->suggest(query);
   return static_cast<Cursor*>(cursor);
 }
 
-Cursor* search(Session* session, const char* query) {
-  auto impl = reinterpret_cast<FSession*>(session);
+Cursor* stdb_search(Session* session, const char* query) {
+  auto impl = reinterpret_cast<SessionImpl*>(session);
   auto cursor = impl->search(query);
   return static_cast<Cursor*>(cursor);
 }
 
-void cursor_close(Cursor* pcursor) {
+void stdb_cursor_close(Cursor* pcursor) {
   auto impl = reinterpret_cast<CursorImpl*>(pcursor);
   delete impl;  // destructor calls `close` method
 }
 
-size_t cursor_read(Cursor       *cursor,
-                   void             *dest,
-                   size_t            dest_size) {
+size_t stdb_cursor_read(Cursor       *cursor,
+                        void             *dest,
+                        size_t            dest_size) {
   auto impl = reinterpret_cast<CursorImpl*>(cursor);
   return impl->read_values(dest, static_cast<u32>(dest_size));
 }
 
-int cursor_is_done(Cursor* pcursor) {
+int stdb_cursor_is_done(Cursor* pcursor) {
   auto impl = reinterpret_cast<CursorImpl*>(pcursor);
   return impl->is_done();
 }
 
-int cursor_is_error(Cursor* pcursor) {
+int stdb_cursor_is_error(Cursor* pcursor) {
   auto impl = reinterpret_cast<CursorImpl*>(pcursor);
   common::Status out_error_code_or_null;
   return impl->is_error(&out_error_code_or_null);
 }
 
-int cursor_is_error_ex(Cursor* pcursor) {
+int stdb_cursor_is_error_ex(Cursor* pcursor) {
   auto impl = reinterpret_cast<CursorImpl*>(pcursor);
   const char* error_message;
   common::Status out_error_code_or_null;
   return impl->is_error(&error_message, &out_error_code_or_null);
 }
 
-int timestamp_to_string(Timestamp ts, char* buffer, size_t buffer_size) {
+int stdb_timestamp_to_string(Timestamp ts, char* buffer, size_t buffer_size) {
   return DateTimeUtil::to_iso_string(ts, buffer, buffer_size);
 }
 
-int param_id_to_series(Session* session, ParamId id, char* buffer, size_t buffer_size) {
-  auto ises = reinterpret_cast<FSession*>(session);
+int stdb_param_id_to_series(Session* session, ParamId id, char* buffer, size_t buffer_size) {
+  auto ises = reinterpret_cast<SessionImpl*>(session);
   return ises->param_id_to_series(id, buffer, buffer_size);
 }
 
 //--------------------------------
 //         Statistics
 //--------------------------------
-void global_search_stats(SearchStats* rcv_stats, int reset) {
-  LOG(FATAL) << "Not implemented";
-}
-
-void global_storage_stats(Database *db, StorageStats* rcv_stats) {
-  LOG(FATAL) << "Not implemented";
-}
-
-int json_stats(Database *db, char* buffer, size_t size) {
+int stdb_json_stats(Database *db, char* buffer, size_t size) {
   auto dbi = reinterpret_cast<DatabaseImpl*>(db);
   try {
     auto ptree = dbi->get_stats();
@@ -440,11 +431,11 @@ int json_stats(Database *db, char* buffer, size_t size) {
   return -1;
 }
 
-void debug_print(Database *db) {
+void stdb_debug_print(Database *db) {
   LOG(FATAL) << "Not implemented";
 }
 
-int get_resource(const char* res_name, char* buf, size_t* bufsize) {
+int stdb_get_resource(const char* res_name, char* buf, size_t* bufsize) {
   static const std::set<std::string> RESOURCES = {
     "function-names",
     "version"
@@ -475,3 +466,12 @@ int get_resource(const char* res_name, char* buf, size_t* bufsize) {
   }
   return common::Status::kOk;
 }
+
+int stdb_debug_report_dump(const char* path2db, const char* outfile) {
+  return Storage::generate_report(path2db, outfile).Code();
+}
+
+int stdb_debug_recovery_report_dump(const char* path2db, const char* outfile) {
+  return Storage::generate_recovery_report(path2db, outfile).Code();
+}
+

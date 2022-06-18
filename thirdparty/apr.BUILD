@@ -96,7 +96,7 @@ genrule(
         'cp -R $$(pwd)/external/apr/* $$TMP_DIR',
         'cd $$TMP_DIR',
         './buildconf -v',
-        './configure --prefix=$$INSTALL_DIR --with-expat=$$INSTALL_DIR/../expat/ --with-sqlite3=$$INSTALL_DIR/../sqlite --enable-shared=false',
+        './configure --prefix=$$INSTALL_DIR --with-expat=$$INSTALL_DIR/../expat/ --with-sqlite3=$$INSTALL_DIR/../sqlite --with-odbc=no --with-pgsql=no --enable-shared=false --disable-dso',
         'make',
         'make install',
         'rm -rf $$TMP_DIR',
