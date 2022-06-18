@@ -18,6 +18,7 @@ jobs:
       - name: test
         run: |
           sudo mkdir -p /data/input_log
+          mkdir -p /tmp/stdb/
           sudo chmod -R 777 /data/input_log
           bazel test ...
 
