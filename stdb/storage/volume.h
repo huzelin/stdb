@@ -12,8 +12,14 @@
 #include <limits>
 #include <vector>
 
+#include <apr.h>
+#include <apr_general.h>
+#include <apr_file_io.h>
+#include <apr_portable.h>
+
 #include "stdb/common/basic.h"
 #include "stdb/common/mmapfile.h"
+#include "stdb/common/memorymappedfile.h"
 #include "stdb/common/status.h"
 #include "stdb/storage/volume_registry.h"
 
@@ -174,6 +180,9 @@ struct IOVecBlock {
   void set_write_pos_and_shrink(int top);
 };
 
+typedef std::unique_ptr<apr_pool_t, void (*)(apr_pool_t*)> AprPoolPtr;
+typedef std::unique_ptr<apr_file_t, void (*)(apr_file_t*)> AprFilePtr;
+
 /** Class that represents metadata volume.
  * MetaVolume is a file that contains some information
  * about each regullar volume - write position, generation, etc.
@@ -238,12 +247,15 @@ class MetaVolume {
 
 class Volume {
  protected:
+  AprPoolPtr  apr_pool_;
+  AprFilePtr  apr_file_handle_;
   u32         file_size_;
   u32         write_pos_;
 
   std::string path_;
 
-  std::unique_ptr<common::MMapFile> mmap_;
+  // Optional mmap
+  std::unique_ptr<MemoryMappedFile> mmap_;
   u8* mmap_ptr_;
 
   Volume(const char* path, size_t write_pos);

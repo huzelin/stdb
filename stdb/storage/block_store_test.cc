@@ -27,6 +27,8 @@ namespace stdb {
 namespace storage {
 
 TEST(TestBlockStore, init_volume) {
+  apr_initialize();
+
   auto cfg_path = common::GetMetaVolumeDir() + "/db2";
   common::RemoveFile(cfg_path);
 

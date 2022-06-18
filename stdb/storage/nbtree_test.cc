@@ -31,6 +31,8 @@ void InitVolume() {
   static bool inited = false;
   if (inited) return;
 
+  apr_initialize();
+
   auto cfg_path = common::GetMetaVolumeDir() + "/db_nbtree";
   common::RemoveFile(cfg_path);
 
