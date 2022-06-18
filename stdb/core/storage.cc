@@ -467,7 +467,7 @@ Storage::Storage(const char* path, const FineTuneParams &params)
     LOG(FATAL) << "Can't read rescue points";
   }
   // There are two possible configurations 1) WAL is disabled 2) WAL is enabled
-  // If WAL is disabled, Akumuli should work as usual. This means that we have
+  // If WAL is disabled,it should work as usual. This means that we have
   // to call 'force_init' for every tree. This will use maximum amount of memory
   // but will increase performance in many cases, because we wan't need to read
   // anything from disk before writing. In this mode every nbtree instance is
@@ -679,7 +679,7 @@ void Storage::run_inputlog_recovery(storage::ShardedInputLog* ilog, std::vector<
       sample.payload.type     = PAYLOAD_FLOAT;
       auto result = storage->cstore_->recovery_write(sample,
                                                      updated_ids.count(sample.paramid));
-      // In a normal situation, Akumuli allows duplicates (data-points
+      // In a normal situation, allows duplicates (data-points
       // with the same timestamp). But during recovery, this leads to
       // the following problem. Recovery procedure will replay the log
       // and try to add every value registered by it. The last value
