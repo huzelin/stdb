@@ -17,6 +17,7 @@ jobs:
           bazel build ...
       - name: test
         run: |
-          mkdir -p /data/input_log
+          sudo mkdir -p /data/input_log
+          sudo chmod -R 777 /data/input_log
           bazel test ...
 
