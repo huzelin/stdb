@@ -17,5 +17,6 @@ jobs:
           bazel build ...
       - name: test
         run: |
+          mkdir -p /data/input_log
           bazel test ...
 
