@@ -112,10 +112,11 @@ EXPORT int stdb_create_database(const char* base_file_name, const char* metadata
  * @param metadata_path path to metadata file
  * @param volumes_path path to volumes
  * @param num_volumes number of volumes to create
+ * @param volume_size the size of volume
  */
 EXPORT int stdb_create_database_ex(const char* base_file_name, const char* metadata_path,
                                    const char* volumes_path, i32 num_volumes,
-                                   u64 page_size, bool allocate);
+                                   u64 volume_size, bool allocate);
 
 /** Remove all volumes.
  * @param file_name

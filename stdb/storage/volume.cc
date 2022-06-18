@@ -470,6 +470,56 @@ common::Status MetaVolume::flush(u32 id) {
   return common::Status::Ok();
 }
 
+// Volume implementation.
+static AprPoolPtr _make_apr_pool() {
+  apr_pool_t* mem_pool = nullptr;
+  apr_status_t status = apr_pool_create(&mem_pool, nullptr);
+  if (status != APR_SUCCESS) {
+    LOG(FATAL) << "Cann't create APR pool";
+  }
+  AprPoolPtr pool(mem_pool, &apr_pool_destroy);
+  return pool;
+}
+
+static void _close_apr_file(apr_file_t* file) {
+  apr_file_close(file);
+}
+
+static AprFilePtr _open_file(const char* file_name, apr_pool_t* pool) {
+  apr_file_t* pfile = nullptr;
+  apr_status_t status = apr_file_open(&pfile, file_name, APR_READ | APR_WRITE, APR_OS_DEFAULT, pool);
+  if (status != APR_SUCCESS) {
+    LOG(FATAL) << "Cann't open file " << file_name;
+  }
+  AprFilePtr file(pfile, &_close_apr_file);
+  return file;
+}
+
+static u64 _get_file_size(apr_file_t* file) {
+  apr_finfo_t info;
+  auto status = apr_file_info_get(&info, APR_FINFO_SIZE, file);
+  if (status != APR_SUCCESS) {
+    LOG(FATAL) << "Cann't get file info";
+  }
+  return static_cast<u64>(info.size);
+}
+
+static void _create_file(const char* file_name, u64 size) {
+  LOG(INFO) << "Create " << file_name << " size:" << size;
+  AprPoolPtr pool = _make_apr_pool();
+  apr_file_t* pfile = nullptr;
+  apr_status_t status = apr_file_open(&pfile, file_name, APR_TRUNCATE | APR_CREATE | APR_WRITE, APR_OS_DEFAULT, pool.get());
+  if (status != APR_SUCCESS) {
+    LOG(FATAL) << "Cann't create file " << file_name;
+  }
+  AprFilePtr file(pfile, &_close_apr_file);
+  status = apr_file_trunc(file.get(), static_cast<apr_off_t>(size));
+  if (status != APR_SUCCESS) {
+    LOG(FATAL) << "Cann't truncate file";
+  }
+}
+
+/*
 static std::unique_ptr<common::MMapFile> GetMMapFile(const char* path) {
   std::unique_ptr<common::MMapFile> mmapFile(new common::MMapFile());
   auto status = mmapFile->Init(path);
@@ -482,15 +532,29 @@ static std::unique_ptr<common::MMapFile> GetMMapFile(const char* path) {
 void CreateMMapFile(const char* path, u64 capacity) {
   std::unique_ptr<common::MMapFile> mmapFile(new common::MMapFile());
   mmapFile->Init(path, capacity * STDB_BLOCK_SIZE);
-}
+}*/
 
 Volume::Volume(const char* path, size_t write_pos) :
+    apr_pool_(_make_apr_pool()),
+    apr_file_handle_(_open_file(path, apr_pool_.get())),
+    file_size_(static_cast<u32>(_get_file_size(apr_file_handle_.get()) / STDB_BLOCK_SIZE)),
     write_pos_(static_cast<u32>(write_pos)),
     path_(path),
     mmap_ptr_(nullptr) {
-  mmap_ = GetMMapFile(path);
-  mmap_ptr_ = reinterpret_cast<u8*>(mmap_->GetBase());
-  file_size_ = mmap_->GetMmapSize() / STDB_BLOCK_SIZE;
+#ifdef VOLUME_MMAP
+  mmap_.reset(new MemoryMappedFile(path, false));
+  if (mmap_->is_bad()) {
+    mmap_.reset();
+    mmap_ptr_ = nullptr;
+  } else {
+    mmap_->protect_all();
+    mmap_ptr_ = static_cast<const u8*>(mmap_->get_pointer());
+    if (mmap_->get_size() != file_size_ * STDB_BLOCK_SIZE) {
+      mmap_.reset();
+      mmap_ptr_ = nullptr;
+    }
+  }
+#endif
 }
 
 void Volume::reset() {
@@ -498,7 +562,8 @@ void Volume::reset() {
 }
 
 void Volume::create_new(const char* path, u64 capacity) {
-  CreateMMapFile(path, capacity);
+  auto size = capacity * STDB_BLOCK_SIZE;
+  _create_file(path, size);
 }
 
 std::unique_ptr<Volume> Volume::open_existing(const char* path, u64 pos) {
@@ -510,14 +575,19 @@ std::unique_ptr<Volume> Volume::open_existing(const char* path, u64 pos) {
 //! Append block to file (source size should be 4 at least BLOCK_SIZE)
 std::tuple<common::Status, BlockAddr> Volume::append_block(const u8* source) {
   if (write_pos_ >= file_size_) {
-    return std::make_tuple(
-        common::Status::Overflow(
-            "write_pos_=" + std::to_string(write_pos_) +
-            " file_size_=" + std::to_string(file_size_)), 0u);
+    return std::make_tuple(common::Status::Overflow(), 0u);
   }
 
-  auto offset = write_pos_ * STDB_BLOCK_SIZE;
-  memcpy(mmap_ptr_ + offset, source, STDB_BLOCK_SIZE);
+  apr_off_t seek_off = write_pos_ * STDB_BLOCK_SIZE;
+  auto status = apr_file_seek(apr_file_handle_.get(), APR_SET, &seek_off);
+  if (status != APR_SUCCESS) {
+    LOG(FATAL) << "Volume seek error, seek_off=" << seek_off;
+  }
+  apr_size_t bytes_written = 0;
+  status = apr_file_write_full(apr_file_handle_.get(), source, STDB_BLOCK_SIZE, &bytes_written);
+  if (status != APR_SUCCESS) {
+    LOG(FATAL) << "Volume write error";
+  }
   auto result = write_pos_++;
   return std::make_tuple(common::Status::Ok(), result);
 }
@@ -525,19 +595,16 @@ std::tuple<common::Status, BlockAddr> Volume::append_block(const u8* source) {
 std::tuple<common::Status, BlockAddr> Volume::append_block(const IOVecBlock *source) {
   static std::vector<u8> padding(IOVecBlock::COMPONENT_SIZE);
   if (write_pos_ >= file_size_) {
-    return std::make_tuple(
-        common::Status::Overflow(
-            "write_pos_=" + std::to_string(write_pos_) +
-            " file_size_=" + std::to_string(file_size_)), 0u);
+    return std::make_tuple(common::Status::Overflow(), 0u);
   }
 
-  auto seek_off = write_pos_ * STDB_BLOCK_SIZE;
-  auto fd = mmap_->fd();
-  if (lseek(fd, seek_off, SEEK_SET) < 0) {
-    return std::make_tuple(
-        common::Status::FileSeekError(strerror(errno)), 0u);
+  apr_off_t seek_off = write_pos_ * STDB_BLOCK_SIZE;
+  apr_status_t status = apr_file_seek(apr_file_handle_.get(), APR_SET, &seek_off);
+  if (status != APR_SUCCESS) {
+    LOG(FATAL) << "Volume seek error, seek_off=" << seek_off;
   }
-  
+  apr_size_t bytes_written = 0;
+
   struct iovec vec[IOVecBlock::NCOMPONENTS] = {};
   size_t nvec = 0;
   for (int i = 0; i < IOVecBlock::NCOMPONENTS; i++) {
@@ -551,9 +618,9 @@ std::tuple<common::Status, BlockAddr> Volume::append_block(const IOVecBlock *sou
     nvec++;
   }
 
-  auto size = writev(fd, vec, nvec);
-  if (size != STDB_BLOCK_SIZE) {
-    return std::make_tuple(common::Status::FileWriteError(strerror(errno)), 0u);
+  status = apr_file_writev_full(apr_file_handle_.get(), vec, nvec, &bytes_written);
+  if (status != APR_SUCCESS) {
+    LOG(FATAL) << "Volume write error";
   }
   auto result = write_pos_++;
   return std::make_tuple(common::Status::Ok(), result);
@@ -562,12 +629,23 @@ std::tuple<common::Status, BlockAddr> Volume::append_block(const IOVecBlock *sou
 //! Read filxed size block from file
 common::Status Volume::read_block(u32 ix, u8* dest) const {
   if (ix >= write_pos_) {
-    return common::Status::Overflow(
-        "ix=" + std::to_string(ix) +
-        " write_pos_=" + std::to_string(write_pos_));
+    return common::Status::BadArg();
   }
-  u64 offset = ix * STDB_BLOCK_SIZE;
-  memcpy(dest, mmap_ptr_ + offset, STDB_BLOCK_SIZE);
+  if (mmap_ptr_) {
+    u64 offset = ix * STDB_BLOCK_SIZE;
+    memcpy(dest, mmap_ptr_ + offset, STDB_BLOCK_SIZE);
+    return common::Status::Ok();
+  }
+  apr_off_t offset = ix * STDB_BLOCK_SIZE;
+  apr_status_t status = apr_file_seek(apr_file_handle_.get(), APR_SET, &offset);
+  if (status != APR_SUCCESS) {
+    LOG(FATAL) << "Volume seek error";
+  }
+  apr_size_t outsize = 0;
+  status = apr_file_read_full(apr_file_handle_.get(), dest, STDB_BLOCK_SIZE, &outsize);
+  if (status != APR_SUCCESS) {
+    LOG(FATAL) << "Volume read error";
+  }
   return common::Status::Ok();
 }
 
@@ -578,7 +656,7 @@ std::tuple<common::Status, std::unique_ptr<IOVecBlock>> Volume::read_block(u32 i
   u8* data = block->get_data(0);
   u32 size = block->get_size(0);
   if (size != STDB_BLOCK_SIZE) {
-    return std::make_tuple(common::Status::BadArg(""), std::move(block));
+    return std::make_tuple(common::Status::BadArg(), std::move(block));
   }
   auto status = read_block(ix, data);
   return std::make_tuple(status, std::move(block));
@@ -586,17 +664,21 @@ std::tuple<common::Status, std::unique_ptr<IOVecBlock>> Volume::read_block(u32 i
 
 std::tuple<common::Status, const u8*> Volume::read_block_zero_copy(u32 ix) const {
   if (ix >= write_pos_) {
-    return std::make_tuple(
-        common::Status::Overflow(
-            "ix=" + std::to_string(ix) +
-            " write_pos_=" + std::to_string(write_pos_)), nullptr);
+    return std::make_tuple(common::Status::BadArg(), nullptr);
   }
-  u64 offset = ix * STDB_BLOCK_SIZE;
-  auto ptr = mmap_ptr_ + offset;
-  return std::make_tuple(common::Status::Ok(), ptr);
+  if (mmap_ptr_) {
+    u64 offset = ix * STDB_BLOCK_SIZE;
+    auto ptr = mmap_ptr_ + offset;
+    return std::make_tuple(common::Status::Ok(), ptr);
+  }
+  return std::make_tuple(common::Status::Unavailable(), nullptr);
 }
 
 void Volume::flush() {
+  apr_status_t status = apr_file_flush(apr_file_handle_.get());
+  if (status != APR_SUCCESS) {
+    LOG(FATAL) << "Volume flush error";
+  }
 }
 
 u32 Volume::get_size() const {

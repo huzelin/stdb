@@ -28,7 +28,7 @@ TEST(TestSTDB, initialize) {
 }
 
 TEST(TestSTDB, create_database) {
-  stdb_create_database("test", "./metas", "./volumes", 20, true);
+  stdb_create_database_ex("test", "./metas", "./volumes", 1, 4096 * 1024, true);
 }
 
 TEST(TestSTDB, open_database) {
@@ -59,10 +59,17 @@ void insert_series_data(const char* series) {
   auto session = stdb_create_session(database);
 
   Sample sample;
-  for (auto i = 0; i < 1000; ++i) {
+  for (auto i = 0; i < 1000000; ++i) {
     stdb_series_to_param_id(session, series, series + strlen(series), &sample);
-    sample.timestamp = 20000000 + i * 10000;
-    stdb_write_sample(session, &sample);
+    sample.timestamp = 20000000 + i;
+    sample.payload.float64 = i;
+    sample.payload.size = 0;
+    sample.payload.type = PAYLOAD_FLOAT;
+    auto ret = stdb_write_sample(session, &sample);
+    // EXPECT_EQ(0, ret);
+    if (i % 10000 == 0) {
+      LOG(INFO) << i;
+    }
   }
   stdb_destroy_session(session);
   stdb_close_database(database);

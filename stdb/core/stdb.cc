@@ -267,9 +267,9 @@ int stdb_create_database_ex(const char     *base_file_name,
                             const char     *metadata_path,
                             const char     *volumes_path,
                             i32             num_volumes,
-                            u64             page_size,
+                            u64             volume_size,
                             bool            allocate) {
-  auto status = Storage::new_database(base_file_name, metadata_path, volumes_path, num_volumes, page_size, allocate);
+  auto status = Storage::new_database(base_file_name, metadata_path, volumes_path, num_volumes, volume_size, allocate);
   return status.Code();
 }
 

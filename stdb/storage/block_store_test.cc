@@ -27,13 +27,15 @@ namespace stdb {
 namespace storage {
 
 TEST(TestBlockStore, init_volume) {
+  apr_initialize();
+
   auto cfg_path = common::GetMetaVolumeDir() + "/db2";
   common::RemoveFile(cfg_path);
 
   std::shared_ptr<VolumeRegistry> volume_registry(new MetaStorage("db2"));
   auto meta_volume = MetaVolume::open_existing(volume_registry);
 
-  u32 capacity = 1024 * 1024;
+  u32 capacity = 1024;
   meta_volume->add_volume(0, capacity, "/tmp/stdb/db2_0.vol");
   Volume::create_new("/tmp/stdb/db2_0.vol", capacity);
 }
