@@ -124,6 +124,7 @@ cc_test(
     "@gtest//:gtest",
     "@gtest//:gtest_main",
     ":storage",
+    "//stdb/core:core",
   ],
 )
 
