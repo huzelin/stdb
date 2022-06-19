@@ -91,117 +91,117 @@ TEST(TestNBTree, Test_nbtree_rc_append_1) {
   test_nbtree_roots_collection(100, 0, 100);
 }
 
-#if 0
-BOOST_AUTO_TEST_CASE(Test_nbtree_rc_append_2) {
-    test_nbtree_roots_collection(2000, 0, 2000);
+TEST(TestNBTree, Test_nbtree_rc_append_2) {
+  test_nbtree_roots_collection(2000, 0, 2000);
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_rc_append_3) {
-    test_nbtree_roots_collection(200000, 0, 200000);
+TEST(TestNBTree, Test_nbtree_rc_append_3) {
+  test_nbtree_roots_collection(200000, 0, 200000);
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_rc_append_4) {
-    test_nbtree_roots_collection(100, 99, 0);
+TEST(TestNBTree, Test_nbtree_rc_append_4) {
+  test_nbtree_roots_collection(100, 99, 0);
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_rc_append_5) {
-    test_nbtree_roots_collection(2000, 1999, 0);
+TEST(TestNBTree, Test_nbtree_rc_append_5) {
+  test_nbtree_roots_collection(2000, 1999, 0);
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_rc_append_6) {
-    test_nbtree_roots_collection(200000, 199999, 0);
+TEST(TestNBTree, Test_nbtree_rc_append_6) {
+  test_nbtree_roots_collection(200000, 199999, 0);
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_rc_append_rand_read) {
-    for (int i = 0; i < 100; i++) {
-        auto N = static_cast<u32>(rand()) % 200000u;
-        auto from = static_cast<u32>(rand()) % N;
-        auto to = static_cast<u32>(rand()) % N;
-        test_nbtree_roots_collection(N, from, to);
-    }
+TEST(TestNBTree, Test_nbtree_rc_append_rand_read) {
+  for (int i = 0; i < 100; i++) {
+    auto N = static_cast<u32>(rand()) % 200000u;
+    auto from = static_cast<u32>(rand()) % N;
+    auto to = static_cast<u32>(rand()) % N;
+    test_nbtree_roots_collection(N, from, to);
+  }
 }
 
 void test_nbtree_chunked_read(u32 N, u32 begin, u32 end, u32 chunk_size) {
-    ScanDir dir = begin < end ? ScanDir::FWD : ScanDir::BWD;
-    std::shared_ptr<BlockStore> bstore = BlockStoreBuilder::create_memstore();
-    std::vector<LogicAddr> addrlist;  // should be empty at first
-    auto collection = std::make_shared<NBTreeExtentsList>(42, addrlist, bstore);
-    collection->force_init();
+  ScanDir dir = begin < end ? ScanDir::FWD : ScanDir::BWD;
+  std::shared_ptr<BlockStore> bstore = BlockStoreBuilder::create_memstore();
+  std::vector<LogicAddr> addrlist;  // should be empty at first
+  auto collection = std::make_shared<NBTreeExtentsList>(42, addrlist, bstore);
+  collection->force_init();
 
-    for (u32 i = 0; i < N; i++) {
-        collection->append(i, i);
+  for (u32 i = 0; i < N; i++) {
+    collection->append(i, i);
+  }
+
+  // Read data back
+  std::unique_ptr<RealValuedOperator> it = collection->search(begin, end);
+
+  common::Status status;
+  size_t sz;
+  std::vector<Timestamp> ts(chunk_size, 0xF0F0F0F0);
+  std::vector<double> xs(chunk_size, -1);
+
+  u32 total_size = 0u;
+  Timestamp ts_seen = begin;
+  while (true) {
+    std::tie(status, sz) = it->read(ts.data(), xs.data(), chunk_size);
+
+    if (sz == 0 && status == common::Status::Ok()) {
+      LOG(FATAL) << "Invalid iterator output, sz=0, status=" << status.ToString();
+    }
+    total_size += sz;
+
+    EXPECT_TRUE(status == common::Status::Ok() || status == common::Status::NoData());
+
+    if (dir == ScanDir::FWD) {
+      for (u32 i = 0; i < sz; i++) {
+        const auto curr = ts_seen;
+        if (ts[i] != curr) {
+          LOG(FATAL) << "Invalid timestamp at " << i << ", expected: " << curr << ", actual: " << ts[i];
+        }
+        if (!same_value(xs[i], curr)) {
+          LOG(FATAL) << "Invalid value at " << i << ", expected: " << curr << ", actual: " << xs[i];
+        }
+        ts_seen = ts[i] + 1;
+      }
+    } else {
+      for (u32 i = 0; i < sz; i++) {
+        const auto curr = ts_seen;
+        if (ts[i] != curr) {
+          LOG(FATAL) << "Invalid timestamp at " << i << ", expected: " << curr << ", actual: " << ts[i];
+        }
+        if (!same_value(xs[i], curr)) {
+          LOG(FATAL) << "Invalid value at " << i << ", expected: " << curr << ", actual: " << xs[i];
+        }
+        ts_seen = ts[i] - 1;
+      }
     }
 
-    // Read data back
-    std::unique_ptr<RealValuedOperator> it = collection->search(begin, end);
-
-    aku_Status status;
-    size_t sz;
-    std::vector<aku_Timestamp> ts(chunk_size, 0xF0F0F0F0);
-    std::vector<double> xs(chunk_size, -1);
-
-    u32 total_size = 0u;
-    aku_Timestamp ts_seen = begin;
-    while(true) {
-        std::tie(status, sz) = it->read(ts.data(), xs.data(), chunk_size);
-
-        if (sz == 0 && status == AKU_SUCCESS) {
-            BOOST_FAIL("Invalid iterator output, sz=0, status=" << status);
-        }
-        total_size += sz;
-
-        BOOST_REQUIRE(status == AKU_SUCCESS || status == AKU_ENO_DATA);
-
-        if (dir == ScanDir::FWD) {
-            for (u32 i = 0; i < sz; i++) {
-                const auto curr = ts_seen;
-                if (ts[i] != curr) {
-                    BOOST_FAIL("Invalid timestamp at " << i << ", expected: " << curr << ", actual: " << ts[i]);
-                }
-                if (!same_value(xs[i], curr)) {
-                    BOOST_FAIL("Invalid value at " << i << ", expected: " << curr << ", actual: " << xs[i]);
-                }
-                ts_seen = ts[i] + 1;
-            }
-        } else {
-            for (u32 i = 0; i < sz; i++) {
-                const auto curr = ts_seen;
-                if (ts[i] != curr) {
-                    BOOST_FAIL("Invalid timestamp at " << i << ", expected: " << curr << ", actual: " << ts[i]);
-                }
-                if (!same_value(xs[i], curr)) {
-                    BOOST_FAIL("Invalid value at " << i << ", expected: " << curr << ", actual: " << xs[i]);
-                }
-                ts_seen = ts[i] - 1;
-            }
-        }
-
-        if (status == AKU_ENO_DATA || ts_seen == end) {
-            break;
-        }
+    if (status == common::Status::NoData() || ts_seen == end) {
+      break;
     }
-    if (ts_seen != end) {
-        BOOST_FAIL("Bad range, expected: " << end << ", actual: " << ts_seen <<
-                   " dir: " << (dir == ScanDir::FWD ? "forward" : "backward"));
-    }
-    size_t outsz = dir == ScanDir::FWD ? end - begin : begin - end;
-    BOOST_REQUIRE_EQUAL(total_size, outsz);
+  }
+  if (ts_seen != end) {
+    LOG(FATAL) << "Bad range, expected: " << end << ", actual: " << ts_seen <<
+        " dir: " << (dir == ScanDir::FWD ? "forward" : "backward");
+  }
+  size_t outsz = dir == ScanDir::FWD ? end - begin : begin - end;
+  EXPECT_EQ(total_size, outsz);
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_chunked_read) {
-    for (u32 i = 0; i < 100; i++) {
-        auto N = static_cast<u32>(rand() % 200000);
-        auto from = static_cast<u32>(rand()) % N;
-        auto to = static_cast<u32>(rand()) % N;
-        auto chunk = static_cast<u32>(rand()) % N;
-        test_nbtree_chunked_read(N, from, to, chunk);
-    }
+TEST(TestNBtree, Test_nbtree_chunked_read) {
+  for (u32 i = 0; i < 100; i++) {
+    auto N = static_cast<u32>(rand() % 200000);
+    auto from = static_cast<u32>(rand()) % N;
+    auto to = static_cast<u32>(rand()) % N;
+    auto chunk = static_cast<u32>(rand()) % N;
+    test_nbtree_chunked_read(N, from, to, chunk);
+  }
 }
 
 void check_tree_consistency(std::shared_ptr<BlockStore> bstore, size_t level, NBTreeExtent const* extent) {
-    NBTreeExtent::check_extent(extent, bstore, level);
+  NBTreeExtent::check_extent(extent, bstore, level);
 }
 
+#if 0
 void test_reopen_storage(i32 Npages, i32 Nitems) {
     LogicAddr last_one = EMPTY_ADDR;
     std::shared_ptr<BlockStore> bstore =
