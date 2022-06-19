@@ -201,365 +201,354 @@ void check_tree_consistency(std::shared_ptr<BlockStore> bstore, size_t level, NB
   NBTreeExtent::check_extent(extent, bstore, level);
 }
 
-#if 0
 void test_reopen_storage(i32 Npages, i32 Nitems) {
-    LogicAddr last_one = EMPTY_ADDR;
-    std::shared_ptr<BlockStore> bstore =
-        BlockStoreBuilder::create_memstore([&last_one](LogicAddr addr) { last_one = addr; });
-    std::vector<LogicAddr> addrlist;  // should be empty at first
-    auto collection = std::make_shared<NBTreeExtentsList>(42, addrlist, bstore);
-    collection->force_init();
+  LogicAddr last_one = EMPTY_ADDR;
+  std::shared_ptr<BlockStore> bstore =
+      BlockStoreBuilder::create_memstore([&last_one](LogicAddr addr) { last_one = addr; });
+  std::vector<LogicAddr> addrlist;  // should be empty at first
+  auto collection = std::make_shared<NBTreeExtentsList>(42, addrlist, bstore);
+  collection->force_init();
 
-    u32 nleafs = 0;
-    u32 nitems = 0;
-    for (u32 i = 0; true; i++) {
-        if (collection->append(i, i) == NBTreeAppendResult::OK_FLUSH_NEEDED) {
-            // addrlist changed
-            auto newroots = collection->get_roots();
-            if (newroots == addrlist) {
-                BOOST_FAIL("Roots collection must change");
-            }
-            std::swap(newroots, addrlist);
-            nleafs++;
-            if (static_cast<i32>(nleafs) == Npages) {
-                nitems = i;
-                break;
-            }
-        }
-        if (static_cast<i32>(i) == Nitems) {
-            nitems = i;
-            break;
-        }
+  u32 nleafs = 0;
+  u32 nitems = 0;
+  for (u32 i = 0; true; i++) {
+    if (collection->append(i, i) == NBTreeAppendResult::OK_FLUSH_NEEDED) {
+      // addrlist changed
+      auto newroots = collection->get_roots();
+      if (newroots == addrlist) {
+        LOG(FATAL) << "Roots collection must change";
+      }
+      std::swap(newroots, addrlist);
+      nleafs++;
+      if (static_cast<i32>(nleafs) == Npages) {
+        nitems = i;
+        break;
+      }
     }
-
-    addrlist = collection->close();
-
-    BOOST_REQUIRE_EQUAL(addrlist.back(), last_one);
-
-    // TODO: check attempt to open tree using wrong id!
-    collection = std::make_shared<NBTreeExtentsList>(42, addrlist, bstore);
-    collection->force_init();
-
-    auto extents = collection->get_extents();
-    for (size_t i = 0; i < extents.size(); i++) {
-        auto extent = extents[i];
-        check_tree_consistency(bstore, i, extent);
+    if (static_cast<i32>(i) == Nitems) {
+      nitems = i;
+      break;
     }
+  }
 
-    std::unique_ptr<RealValuedOperator> it = collection->search(0, nitems);
-    std::vector<aku_Timestamp> ts(nitems, 0);
-    std::vector<double> xs(nitems, 0);
-    aku_Status status = AKU_SUCCESS;
-    size_t sz = 0;
-    std::tie(status, sz) = it->read(ts.data(), xs.data(), nitems);
-    BOOST_REQUIRE(sz == nitems);
-    BOOST_REQUIRE(status == AKU_SUCCESS);
-    for (u32 i = 0; i < nitems; i++) {
-        if (ts[i] != i) {
-            BOOST_FAIL("Invalid timestamp at " << i);
-        }
-        if (!same_value(xs[i], static_cast<double>(i))) {
-            BOOST_FAIL("Invalid timestamp at " << i);
-        }
+  addrlist = collection->close();
+
+  EXPECT_EQ(addrlist.back(), last_one);
+
+  // TODO: check attempt to open tree using wrong id!
+  collection = std::make_shared<NBTreeExtentsList>(42, addrlist, bstore);
+  collection->force_init();
+
+  auto extents = collection->get_extents();
+  for (size_t i = 0; i < extents.size(); i++) {
+    auto extent = extents[i];
+    check_tree_consistency(bstore, i, extent);
+  }
+
+  std::unique_ptr<RealValuedOperator> it = collection->search(0, nitems);
+  std::vector<Timestamp> ts(nitems, 0);
+  std::vector<double> xs(nitems, 0);
+  common::Status status = common::Status::Ok();
+  size_t sz = 0;
+  std::tie(status, sz) = it->read(ts.data(), xs.data(), nitems);
+  EXPECT_EQ(sz, nitems);
+  EXPECT_EQ(status, common::Status::Ok());
+  for (u32 i = 0; i < nitems; i++) {
+    if (ts[i] != i) {
+      LOG(FATAL) << "Invalid timestamp at " << i;
     }
+    if (!same_value(xs[i], static_cast<double>(i))) {
+      LOG(FATAL) << "Invalid timestamp at " << i;
+    }
+  }
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_reopen_1) {
-    test_reopen_storage(-1, 1);
+TEST(TestNBTree, Test_nbtree_reopen_1) {
+  test_reopen_storage(-1, 1);
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_reopen_2) {
-    test_reopen_storage(1, -1);
+TEST(TestNBTree, Test_nbtree_reopen_2) {
+  test_reopen_storage(1, -1);
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_reopen_3) {
-    test_reopen_storage(2, -1);
+TEST(TestNBTree, Test_nbtree_reopen_3) {
+  test_reopen_storage(2, -1);
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_reopen_4) {
-    test_reopen_storage(32, -1);
+TEST(TestNBtree, Test_nbtree_reopen_4) {
+  test_reopen_storage(32, -1);
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_reopen_5) {
-    test_reopen_storage(33, -1);
+TEST(TestNBTree, Test_nbtree_reopen_5) {
+  test_reopen_storage(33, -1);
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_reopen_6) {
-    test_reopen_storage(32*32, -1);
+TEST(TestNBTree, Test_nbtree_reopen_6) {
+  test_reopen_storage(32*32, -1);
 }
 
 //! Reopen storage that has been closed without final commit.
 void test_storage_recovery_status(u32 N, u32 N_values) {
-    LogicAddr last_block = EMPTY_ADDR;
-    auto cb = [&last_block] (LogicAddr addr) {
-        last_block = addr;
-    };
-    std::shared_ptr<BlockStore> bstore = BlockStoreBuilder::create_memstore(cb);
-    std::vector<LogicAddr> addrlist;  // should be empty at first
-    auto collection = std::make_shared<NBTreeExtentsList>(42, addrlist, bstore);
-    collection->force_init();
+  LogicAddr last_block = EMPTY_ADDR;
+  auto cb = [&last_block] (LogicAddr addr) {
+    last_block = addr;
+  };
+  std::shared_ptr<BlockStore> bstore = BlockStoreBuilder::create_memstore(cb);
+  std::vector<LogicAddr> addrlist;  // should be empty at first
+  auto collection = std::make_shared<NBTreeExtentsList>(42, addrlist, bstore);
+  collection->force_init();
 
-    u32 nleafs = 0;
-    u32 nitems = 0;
-    for (u32 i = 0; true; i++) {
-        if (collection->append(i, i) == NBTreeAppendResult::OK_FLUSH_NEEDED) {
-            // addrlist changed
-            auto newroots = collection->get_roots();
-            if (newroots == addrlist) {
-                BOOST_FAIL("Roots collection must change");
-            }
-            std::swap(newroots, addrlist);
-            auto status = NBTreeExtentsList::repair_status(addrlist);
-            BOOST_REQUIRE(status == NBTreeExtentsList::RepairStatus::REPAIR);
-            nleafs++;
-            if (nleafs == N) {
-                nitems = i;
-                break;
-            }
-        }
-        if (i == N_values) {
-            nitems = i;
-            break;
-        }
+  u32 nleafs = 0;
+  u32 nitems = 0;
+  for (u32 i = 0; true; i++) {
+    if (collection->append(i, i) == NBTreeAppendResult::OK_FLUSH_NEEDED) {
+      // addrlist changed
+      auto newroots = collection->get_roots();
+      if (newroots == addrlist) {
+        LOG(FATAL) << "Roots collection must change";
+      }
+      std::swap(newroots, addrlist);
+      auto status = NBTreeExtentsList::repair_status(addrlist);
+      EXPECT_EQ(status, NBTreeExtentsList::RepairStatus::REPAIR);
+      nleafs++;
+      if (nleafs == N) {
+        nitems = i;
+        break;
+      }
     }
-    addrlist = collection->close();
-    auto status = NBTreeExtentsList::repair_status(addrlist);
-    BOOST_REQUIRE(status == NBTreeExtentsList::RepairStatus::OK);
-    BOOST_REQUIRE(addrlist.back() == last_block);
-    AKU_UNUSED(nitems);
+    if (i == N_values) {
+      nitems = i;
+      break;
+    }
+  }
+  addrlist = collection->close();
+  auto status = NBTreeExtentsList::repair_status(addrlist);
+  EXPECT_EQ(status, NBTreeExtentsList::RepairStatus::OK);
+  EXPECT_EQ(addrlist.back(), last_block);
+  UNUSED(nitems);
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_recovery_status_1) {
-    test_storage_recovery_status(~0u, 32);
+TEST(TestNBTree, Test_nbtree_recovery_status_1) {
+  test_storage_recovery_status(~0u, 32);
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_recovery_status_2) {
-    test_storage_recovery_status(2, ~0u);
+TEST(TestNBTree, Test_nbtree_recovery_status_2) {
+  test_storage_recovery_status(2, ~0u);
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_recovery_status_3) {
-    test_storage_recovery_status(32, ~0u);
+TEST(TestNBtree, Test_nbtree_recovery_status_3) {
+  test_storage_recovery_status(32, ~0u);
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_recovery_status_4) {
-    test_storage_recovery_status(32*32, ~0u);
+TEST(TestNBTree, Test_nbtree_recovery_status_4) {
+  test_storage_recovery_status(32 * 32, ~0u);
 }
 
 //! Reopen storage that has been closed without final commit.
 void test_storage_recovery(u32 N_blocks, u32 N_values) {
-    LogicAddr last_block = EMPTY_ADDR;
-    auto cb = [&last_block] (LogicAddr addr) {
-        last_block = addr;
-    };
-    std::shared_ptr<BlockStore> bstore = BlockStoreBuilder::create_memstore(cb);
-    std::vector<LogicAddr> addrlist;  // should be empty at first
-    auto collection = std::make_shared<NBTreeExtentsList>(42, addrlist, bstore);
-    collection->force_init();
+  LogicAddr last_block = EMPTY_ADDR;
+  auto cb = [&last_block] (LogicAddr addr) {
+    last_block = addr;
+  };
+  std::shared_ptr<BlockStore> bstore = BlockStoreBuilder::create_memstore(cb);
+  std::vector<LogicAddr> addrlist;  // should be empty at first
+  auto collection = std::make_shared<NBTreeExtentsList>(42, addrlist, bstore);
+  collection->force_init();
 
-    u32 nleafs = 0;
-    u32 nitems = 0;
-    for (u32 i = 0; true; i++) {
-        if (collection->append(i, i) == NBTreeAppendResult::OK_FLUSH_NEEDED) {
-            // addrlist changed
-            auto newroots = collection->get_roots();
-            if (newroots == addrlist) {
-                BOOST_FAIL("Roots collection must change");
-            }
-            std::swap(newroots, addrlist);
-            auto status = NBTreeExtentsList::repair_status(addrlist);
-            BOOST_REQUIRE(status == NBTreeExtentsList::RepairStatus::REPAIR);
-            nleafs++;
-            if (nleafs == N_blocks) {
-                nitems = i;
-                break;
-            }
-        }
-        if (i == N_values) {
-            nitems = i;
-            break;
-        }
+  u32 nleafs = 0;
+  u32 nitems = 0;
+  for (u32 i = 0; true; i++) {
+    if (collection->append(i, i) == NBTreeAppendResult::OK_FLUSH_NEEDED) {
+      // addrlist changed
+      auto newroots = collection->get_roots();
+      if (newroots == addrlist) {
+        LOG(FATAL) << "Roots collection must change";
+      }
+      std::swap(newroots, addrlist);
+      auto status = NBTreeExtentsList::repair_status(addrlist);
+      EXPECT_EQ(status, NBTreeExtentsList::RepairStatus::REPAIR);
+      nleafs++;
+      if (nleafs == N_blocks) {
+        nitems = i;
+        break;
+      }
     }
-
-//    std::cout << "last_block: " << last_block << std::endl;
-//    std::cout << "nleafs: " << nleafs << std::endl;
-//    std::cout << "N_blocks: " << N_blocks << std::endl;
-//    std::cout << "Nitems (last timestamp): " << nitems << std::endl;
-
-    addrlist = collection->get_roots();
-
-//    for (auto addr: addrlist) {
-//        std::cout << "\n\nDbg print for " << addr << std::endl;
-//        NBTreeExtentsList::debug_print(addr, bstore);
-//    }
-
-    // delete roots collection
-    collection.reset();
-
-    // TODO: check attempt to open tree using wrong id!
-    collection = std::make_shared<NBTreeExtentsList>(42, addrlist, bstore);
-    collection->force_init();
-
-    auto extents = collection->get_extents();
-    for (size_t i = 0; i < extents.size(); i++) {
-        auto extent = extents[i];
-        check_tree_consistency(bstore, i, extent);
+    if (i == N_values) {
+      nitems = i;
+      break;
     }
+  }
 
-    // Scan entire tree
-    std::unique_ptr<RealValuedOperator> it = collection->search(0, nitems);
-    std::vector<aku_Timestamp> ts(nitems, 0);
-    std::vector<double> xs(nitems, 0);
-    size_t sz = 0;
-    aku_Status status;
-    std::tie(status, sz) = it->read(ts.data(), xs.data(), nitems);
-    if (addrlist.empty()) {
-        // Expect zero, data was stored in single leaf-node.
-        BOOST_REQUIRE(sz == 0);
+  addrlist = collection->get_roots();
+
+  // delete roots collection
+  collection.reset();
+
+  // TODO: check attempt to open tree using wrong id!
+  collection = std::make_shared<NBTreeExtentsList>(42, addrlist, bstore);
+  collection->force_init();
+
+  auto extents = collection->get_extents();
+  for (size_t i = 0; i < extents.size(); i++) {
+    auto extent = extents[i];
+    check_tree_consistency(bstore, i, extent);
+  }
+
+  // Scan entire tree
+  std::unique_ptr<RealValuedOperator> it = collection->search(0, nitems);
+  std::vector<Timestamp> ts(nitems, 0);
+  std::vector<double> xs(nitems, 0);
+  size_t sz = 0;
+  common::Status status;
+  std::tie(status, sz) = it->read(ts.data(), xs.data(), nitems);
+  if (addrlist.empty()) {
+    // Expect zero, data was stored in single leaf-node.
+    EXPECT_EQ(0, sz);
+  } else {
+    if (nleafs == N_blocks) {
+      // new leaf was empty before 'crash'
+      EXPECT_EQ(nitems, sz);
     } else {
-        if (nleafs == N_blocks) {
-            // new leaf was empty before 'crash'
-            BOOST_REQUIRE(sz == nitems);
-        } else {
-            // some data can be lost!
-            BOOST_REQUIRE(sz <= nitems);
-        }
+      // some data can be lost!
+      EXPECT_TRUE(sz <= nitems);
     }
-    // Note: `status` should be equal to AKU_SUCCESS if size of the destination
-    // is equal to array's length. Otherwise iterator should return AKU_ENO_DATA
-    // as an indication that all data-elements have ben read.
-    BOOST_REQUIRE(status == AKU_ENO_DATA || status  == AKU_SUCCESS);
-    for (u32 i = 0; i < sz; i++) {
-        if (ts[i] != i) {
-            BOOST_FAIL("Invalid timestamp at " << i);
-        }
-        if (!same_value(xs[i], static_cast<double>(i))) {
-            BOOST_FAIL("Invalid timestamp at " << i);
-        }
+  }
+  // Note: `status` should be equal to AKU_SUCCESS if size of the destination
+  // is equal to array's length. Otherwise iterator should return AKU_ENO_DATA
+  // as an indication that all data-elements have ben read.
+  EXPECT_TRUE(status == common::Status::NoData() || status == common::Status::Ok());
+  for (u32 i = 0; i < sz; i++) {
+    if (ts[i] != i) {
+      LOG(FATAL) << "Invalid timestamp at " << i;
+    }
+    if (!same_value(xs[i], static_cast<double>(i))) {
+      LOG(FATAL) << "Invalid timestamp at " << i;
+    }
+  }
+
+  if (sz) {
+    // Expected aggregates (calculated by hand)
+    AggregationResult exp_agg = INIT_AGGRES;
+    exp_agg.do_the_math(ts.data(), xs.data(), sz, false);
+
+    // Single leaf node will be lost and aggregates will be empty anyway
+    auto agg_iter = collection->aggregate(0, nitems);
+    Timestamp new_agg_ts;
+    AggregationResult new_agg_result = INIT_AGGRES;
+    size_t agg_size;
+    std::tie(status, agg_size) = agg_iter->read(&new_agg_ts, &new_agg_result, 1);
+    if (status != common::Status::Ok()) {
+      LOG(FATAL) << "Can't aggregate after recovery " << status.ToString();
     }
 
-    if (sz) {
-        // Expected aggregates (calculated by hand)
-        AggregationResult exp_agg = INIT_AGGRES;
-        exp_agg.do_the_math(ts.data(), xs.data(), sz, false);
-
-        // Single leaf node will be lost and aggregates will be empty anyway
-        auto agg_iter = collection->aggregate(0, nitems);
-        aku_Timestamp new_agg_ts;
-        AggregationResult new_agg_result = INIT_AGGRES;
-        size_t agg_size;
-        std::tie(status, agg_size) = agg_iter->read(&new_agg_ts, &new_agg_result, 1);
-        if (status != AKU_SUCCESS) {
-            BOOST_FAIL("Can't aggregate after recovery " + StatusUtil::str(status));
-        }
-
-        // Check that results are correct and match the one that was calculated by hand
-        BOOST_REQUIRE_EQUAL(new_agg_result.cnt, exp_agg.cnt);
-        BOOST_REQUIRE_EQUAL(new_agg_result.first, exp_agg.first);
-        BOOST_REQUIRE_EQUAL(new_agg_result.last, exp_agg.last);
-        BOOST_REQUIRE_EQUAL(new_agg_result.max, exp_agg.max);
-        BOOST_REQUIRE_EQUAL(new_agg_result.maxts, exp_agg.maxts);
-        BOOST_REQUIRE_EQUAL(new_agg_result.min, exp_agg.min);
-        BOOST_REQUIRE_EQUAL(new_agg_result.mints, exp_agg.mints);
-        BOOST_REQUIRE_EQUAL(new_agg_result.sum, exp_agg.sum);
-    }
+    // Check that results are correct and match the one that was calculated by hand
+    EXPECT_EQ(new_agg_result.cnt, exp_agg.cnt);
+    EXPECT_EQ(new_agg_result.first, exp_agg.first);
+    EXPECT_EQ(new_agg_result.last, exp_agg.last);
+    EXPECT_EQ(new_agg_result.max, exp_agg.max);
+    EXPECT_EQ(new_agg_result.maxts, exp_agg.maxts);
+    EXPECT_EQ(new_agg_result.min, exp_agg.min);
+    EXPECT_EQ(new_agg_result.mints, exp_agg.mints);
+    EXPECT_EQ(new_agg_result.sum, exp_agg.sum);
+  }
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_recovery_1) {
-    test_storage_recovery(~0u, 10);
+TEST(TestNBTree, Test_nbtree_recovery_1) {
+  test_storage_recovery(~0u, 10);
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_recovery_2) {
-    test_storage_recovery(1, ~0u);
+TEST(TestNBtree, Test_nbtree_recovery_2) {
+  test_storage_recovery(1, ~0u);
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_recovery_3) {
-    test_storage_recovery(31, ~0u);
+TEST(TestNBtree, Test_nbtree_recovery_3) {
+  test_storage_recovery(31, ~0u);
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_recovery_4) {
-    test_storage_recovery(32, ~0u);
+TEST(TestNBtree, Test_nbtree_recovery_4) {
+  test_storage_recovery(32, ~0u);
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_recovery_5) {
-    test_storage_recovery(33, ~0u);
+TEST(TestNBtree, Test_nbtree_recovery_5) {
+  test_storage_recovery(33, ~0u);
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_recovery_6) {
-    test_storage_recovery(33*33, ~0u);
+TEST(TestNBtree, Test_nbtree_recovery_6) {
+  test_storage_recovery(33 * 33, ~0u);
 }
 
 //! Reopen storage that has been closed without final commit.
 void test_storage_recovery_2(u32 N_blocks) {
-    LogicAddr last_block = EMPTY_ADDR;
-    auto cb = [&last_block] (LogicAddr addr) {
-        last_block = addr;
-    };
-    std::shared_ptr<BlockStore> bstore = BlockStoreBuilder::create_memstore(cb);
-    std::vector<LogicAddr> addrlist;  // should be empty at first
-    auto collection = std::make_shared<NBTreeExtentsList>(42, addrlist, bstore);
-    collection->force_init();
+  LogicAddr last_block = EMPTY_ADDR;
+  auto cb = [&last_block] (LogicAddr addr) {
+    last_block = addr;
+  };
+  std::shared_ptr<BlockStore> bstore = BlockStoreBuilder::create_memstore(cb);
+  std::vector<LogicAddr> addrlist;  // should be empty at first
+  auto collection = std::make_shared<NBTreeExtentsList>(42, addrlist, bstore);
+  collection->force_init();
 
-    u32 nleafs = 0;
+  u32 nleafs = 0;
 
-    auto try_to_recover = [&](std::vector<LogicAddr>&& addrlist, u32 N) {
-        auto col = std::make_shared<NBTreeExtentsList>(42, addrlist, bstore);
-        col->force_init();
-        // scan
-        auto it = col->search(0, N);
-        std::vector<aku_Timestamp> ts(N, 0);
-        std::vector<double> xs(N, 0);
-        aku_Status status = AKU_SUCCESS;
-        size_t sz = 0;
-        std::tie(status, sz) = it->read(ts.data(), xs.data(), N+1);
-        BOOST_REQUIRE(sz == N);
-        BOOST_REQUIRE(status == AKU_ENO_DATA || status  == AKU_SUCCESS);
-        if (sz > 0) {
-            BOOST_REQUIRE(ts[0] == 0);
-            BOOST_REQUIRE(ts[sz - 1] == sz - 1);
-        }
-
-        if (sz) {
-            auto agg_iter = col->aggregate(0, N+1);
-            aku_Timestamp agg_ts;
-            AggregationResult act_agg = INIT_AGGRES;
-            size_t agg_size;
-            std::tie(status, agg_size) = agg_iter->read(&agg_ts, &act_agg, 1);
-            if (status != AKU_SUCCESS) {
-                BOOST_FAIL("Can't aggregate after recovery " + StatusUtil::str(status));
-            }
-
-            // Check that results are correct and match the one that was calculated by hand
-            double exp_sum = (static_cast<double>(N - 1) * N) / 2.0;  // sum of the arithmetic progression [0:N-1]
-            BOOST_REQUIRE_EQUAL(act_agg.cnt, N);
-            BOOST_REQUIRE_EQUAL(act_agg.first, 0);
-            BOOST_REQUIRE_EQUAL(act_agg.last, N-1);
-            BOOST_REQUIRE_EQUAL(act_agg.max, N-1);
-            BOOST_REQUIRE_EQUAL(act_agg.maxts, N-1);
-            BOOST_REQUIRE_EQUAL(act_agg.min, 0);
-            BOOST_REQUIRE_EQUAL(act_agg.mints, 0);
-            BOOST_REQUIRE_EQUAL(act_agg.sum, exp_sum);
-        }
-    };
-
-    for (u32 i = 0; true; i++) {
-        if (collection->append(i, i) == NBTreeAppendResult::OK_FLUSH_NEEDED) {
-            // addrlist changed
-            if (nleafs % 10 == 0) {
-                try_to_recover(collection->get_roots(), i);
-            }
-            nleafs++;
-            if (nleafs == N_blocks) {
-                break;
-            }
-        }
+  auto try_to_recover = [&](std::vector<LogicAddr>&& addrlist, u32 N) {
+    auto col = std::make_shared<NBTreeExtentsList>(42, addrlist, bstore);
+    col->force_init();
+    // scan
+    auto it = col->search(0, N);
+    std::vector<Timestamp> ts(N, 0);
+    std::vector<double> xs(N, 0);
+    common::Status status = common::Status::Ok();
+    size_t sz = 0;
+    std::tie(status, sz) = it->read(ts.data(), xs.data(), N+1);
+    EXPECT_EQ(sz, N);
+    EXPECT_TRUE(status == common::Status::NoData() || status == common::Status::Ok());
+    if (sz > 0) {
+      EXPECT_EQ(ts[0], 0);
+      EXPECT_EQ(ts[sz - 1], sz - 1);
     }
+
+    if (sz) {
+      auto agg_iter = col->aggregate(0, N + 1);
+      Timestamp agg_ts;
+      AggregationResult act_agg = INIT_AGGRES;
+      size_t agg_size;
+      std::tie(status, agg_size) = agg_iter->read(&agg_ts, &act_agg, 1);
+      if (status != common::Status::Ok()) {
+        LOG(FATAL) << "Can't aggregate after recovery " << status.ToString();
+      }
+
+      // Check that results are correct and match the one that was calculated by hand
+      double exp_sum = (static_cast<double>(N - 1) * N) / 2.0;  // sum of the arithmetic progression [0:N-1]
+      EXPECT_EQ(act_agg.cnt, N);
+      EXPECT_EQ(act_agg.first, 0);
+      EXPECT_EQ(act_agg.last, N - 1);
+      EXPECT_EQ(act_agg.max, N - 1);
+      EXPECT_EQ(act_agg.maxts, N - 1);
+      EXPECT_EQ(act_agg.min, 0);
+      EXPECT_EQ(act_agg.mints, 0);
+      EXPECT_EQ(act_agg.sum, exp_sum);
+    }
+  };
+
+  for (u32 i = 0; true; i++) {
+    if (collection->append(i, i) == NBTreeAppendResult::OK_FLUSH_NEEDED) {
+      // addrlist changed
+      if (nleafs % 10 == 0) {
+        try_to_recover(collection->get_roots(), i);
+      }
+      nleafs++;
+      if (nleafs == N_blocks) {
+        break;
+      }
+    }
+  }
 }
 
-BOOST_AUTO_TEST_CASE(Test_nbtree_recovery_7) {
-    test_storage_recovery_2(32*32);
+TEST(TestNBtree, Test_nbtree_recovery_7) {
+  test_storage_recovery_2(32*32);
 }
 
-
+#if 0
 // Test iteration
 
 void test_nbtree_leaf_iteration(aku_Timestamp begin, aku_Timestamp end) {
