@@ -3,17 +3,6 @@ package(default_visibility = ["//visibility:public"])
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_proto_library", "cc_test")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
-proto_library(
-  name = "meta_volume_proto",
-  srcs = ["meta_volume.proto"],
-)
-
-cc_proto_library(
-   name = "meta_volume_cc_proto",
-   deps = [":meta_volume_proto"],
-)
-
-
 cc_library(
   name = "storage",
   srcs = [
@@ -21,7 +10,6 @@ cc_library(
     "compression.cc",
     "column_store.cc",
     "input_log.cc",
-    "meta_storage.cc",
     "nbtree.cc",
     "volume.cc",
     "operators/operator.cc",
@@ -35,7 +23,6 @@ cc_library(
     "compression.h",
     "column_store.h",
     "input_log.h",
-    "meta_storage.h",
     "nbtree.h",
     "nbtree_def.h",
     "tuples.h",
@@ -63,17 +50,6 @@ cc_library(
     "@com_github_boost_container_hash//:container_hash",
     "@com_github_boost_variant//:variant",
     "//stdb/common:common",
-    ":meta_volume_cc_proto",
-  ],
-)
-
-cc_test(
-  name = "meta_storage_test",
-  srcs = ["meta_storage_test.cc"],
-  deps = [
-    "@gtest//:gtest",
-    "@gtest//:gtest_main",
-    ":storage",
   ],
 )
 
