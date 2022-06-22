@@ -613,7 +613,7 @@ void InputLog::remove_last_volume() {
   auto volume = std::move(volumes_.back());
   volumes_.pop_back();
   volume->delete_file();
-  LOG(INFO) << std::string("Remove volume ") + volume->get_path();
+  LOG(INFO) << "Remove volume " << volume->get_path();
 }
 
 InputLog::InputLog(LogSequencer* sequencer, const char* rootdir, size_t nvol, size_t svol, u32 stream_id)
@@ -771,6 +771,8 @@ common::Status InputLog::flush(std::vector<u64>* stale_ids) {
   }
   common::Status result = volumes_.front()->flush();
   if (result.Code() == common::Status::kOverflow && volumes_.size() == max_volumes_) {
+    detect_stale_ids(stale_ids);
+#if 0
     // Extract stale ids
     assert(volumes_.size() > 0);
     std::vector<const roaring::Roaring64Map*> remaining;
@@ -783,6 +785,7 @@ common::Status InputLog::flush(std::vector<u64>* stale_ids) {
     for (auto it = stale.begin(); it != stale.end(); it++) {
       stale_ids->push_back(*it);
     }
+#endif
   }
   return result;
 }
@@ -935,7 +938,7 @@ std::tuple<common::Status, u32> ShardedInputLog::read_next(
   }
   size_t outsize = 0;
   common::Status outstatus;
-  while(buffer_ix_ >= 0 && buffer_size > 0) {
+  while (buffer_ix_ >= 0 && buffer_size > 0) {
     // return values from the current buffer
     Buffer& buffer = read_queue_.at(buffer_ix_);
     if (buffer.pos < buffer.frame->data_points.size) {
@@ -981,7 +984,7 @@ std::tuple<common::Status, u32> ShardedInputLog::read_next(size_t buffer_size, I
   }
   size_t outsize = 0;
   common::Status outstatus;
-  while(buffer_ix_ >= 0 && buffer_size > 0) {
+  while (buffer_ix_ >= 0 && buffer_size > 0) {
     // return values from the current buffer
     Buffer& buffer = read_queue_.at(buffer_ix_);
     if (buffer.pos < buffer.frame->header.size) {

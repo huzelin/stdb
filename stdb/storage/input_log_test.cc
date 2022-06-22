@@ -54,7 +54,7 @@ TEST(TestInputLog, Test_input_roundtrip) {
       u32 outsz;
       std::tie(status, outsz) = ilog.read_next(1024, buffer);
       EXPECT_EQ(status, common::Status::Ok());
-      for(u32 i = 0; i < outsz; i++) {
+      for (u32 i = 0; i < outsz; i++) {
         auto id = buffer[i].id;
         auto payload = boost::get<InputLogDataPoint>(buffer[i].payload);
         act.push_back(std::make_tuple(id, payload.timestamp, payload.value));
