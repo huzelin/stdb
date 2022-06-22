@@ -86,6 +86,7 @@ TEST(TestMetadataStorage, Test_metadata_storage_numeric_config) {
   const char* bstore_type = "FixedSizeFileStorage";
   const char* db_name = "db_test";
   db.init_config(db_name, creation_datetime, bstore_type);
+
   std::string actual_dt;
   bool success = db.get_config_param("creation_datetime", &actual_dt);
   EXPECT_TRUE(success);
@@ -98,6 +99,10 @@ TEST(TestMetadataStorage, Test_metadata_storage_numeric_config) {
   success = db.get_config_param("db_name", &actual_db_name);
   EXPECT_TRUE(success);
   EXPECT_STREQ(db_name, actual_db_name.c_str());
+  std::string actual_version;
+  success = db.get_config_param("storage_version", &actual_version);
+  EXPECT_TRUE(success);
+  EXPECT_EQ(actual_version, std::to_string(STDB_VERSION));
 }
 
 TEST(TestStorage, Test_storage_add_series_1) {
@@ -201,21 +206,20 @@ TEST(TestStorage, Test_storage_add_values_2) {
 }
 
 // Test read queries
-void fill_data(std::shared_ptr<StorageSession> session, Timestamp begin, Timestamp end, std::vector<std::string> const& names) {
+void fill_data(std::shared_ptr<StorageSession> session,
+               Timestamp begin,
+               Timestamp end,
+               std::vector<std::string> const& names) {
   for (Timestamp ts = begin; ts < end; ts++) {
     for (auto it: names) {
       Sample sample;
       sample.timestamp = ts;
       sample.payload.type = PAYLOAD_FLOAT;
-      sample.payload.float64 = double(ts)/10.0;
+      sample.payload.float64 = double(ts) / 10.0;
       auto status = session->init_series_id(it.data(), it.data() + it.size(), &sample);
-      if (status != common::Status::Ok()) {
-        EXPECT_EQ(status, common::Status::Ok());
-      }
+      EXPECT_EQ(status, common::Status::Ok());
       status = session->write(sample);
-      if (status != common::Status::Ok()) {
-        EXPECT_EQ(status, common::Status::Ok());
-      }
+      EXPECT_EQ(status, common::Status::Ok());
     }
   }
 }
@@ -233,16 +237,14 @@ void fill_data(std::shared_ptr<StorageSession> session,
       sample.payload.type = PAYLOAD_FLOAT;
       sample.timestamp = ts;
       sample.payload.float64 = xs;
-      if (xs > 0 && xs < 1.0E-200) {
-        std::cout << "bug" << std::endl;
-      }
+      // if (xs > 0 && xs < 1.0E-200) {
+      //  LOG(ERROR) << "bug";
+      // }
       auto status = session->init_series_id(it.data(), it.data() + it.size(), &sample);
       EXPECT_EQ(status, common::Status::Ok());
 
       status = session->write(sample);
-      if (status != common::Status::Ok()) {
-        EXPECT_EQ(status, common::Status::Ok());
-      }
+      EXPECT_EQ(status, common::Status::Ok());
     }
   }
 }
@@ -317,14 +319,15 @@ std::string make_scan_query(Timestamp begin, Timestamp end, OrderBy order) {
   return str.str();
 }
 
-void check_timestamps(CursorMock const& mock, std::vector<Timestamp> expected, OrderBy order, std::vector<std::string> names) {
+void check_timestamps(CursorMock const& mock,
+                      std::vector<Timestamp> expected,
+                      OrderBy order,
+                      std::vector<std::string> names) {
   size_t tsix = 0;
   if (order == OrderBy::SERIES) {
     for (auto s: names) {
       for (auto expts: expected) {
-        if (expts != mock.samples.at(tsix).timestamp) {
-          EXPECT_EQ(expts, mock.samples.at(tsix).timestamp);
-        }
+        EXPECT_EQ(expts, mock.samples.at(tsix).timestamp);
         tsix++;
       }
     }
@@ -332,9 +335,7 @@ void check_timestamps(CursorMock const& mock, std::vector<Timestamp> expected, O
   } else {
     for (auto expts: expected) {
       for (auto s: names) {
-        if (expts != mock.samples.at(tsix).timestamp) {
-          EXPECT_EQ(expts, mock.samples.at(tsix).timestamp);
-        }
+        EXPECT_EQ(expts, mock.samples.at(tsix).timestamp);
         tsix++;
       }
     }
@@ -358,13 +359,9 @@ static void check_paramids(StorageSession& session,
         char buffer[buffer_size];
         auto id = cursor.samples.at(iter++).paramid;
         auto len = session.get_series_name(id, buffer, buffer_size);
-        if (len < 0) {
-          LOG(FATAL) << "Can't extract series name from session";
-        }
+        EXPECT_GT(len, 0);
         std::string actual(buffer, buffer + len);
-        if (actual != expected) {
-          EXPECT_EQ(actual, expected);
-        }
+        EXPECT_EQ(actual, expected);
       }
     }
     EXPECT_EQ(cursor.samples.size(), iter);
@@ -381,13 +378,9 @@ static void check_paramids(StorageSession& session,
         char buffer[buffer_size];
         auto id = cursor.samples.at(iter++).paramid;
         auto len = session.get_series_name(id, buffer, buffer_size);
-        if (len < 0) {
-          LOG(FATAL) << "Can't extract series name from session";
-        }
+        EXPECT_GT(len, 0);
         std::string actual(buffer, buffer + len);
-        if (actual != expected) {
-          EXPECT_EQ(actual, expected);
-        }
+        EXPECT_EQ(actual, expected);
       }
     }
     EXPECT_EQ(cursor.samples.size(), iter);
@@ -417,11 +410,11 @@ void test_storage_read_query(Timestamp begin, Timestamp end, OrderBy order) {
   EXPECT_EQ(cursor.error, common::Status::Ok());
   size_t expected_size;
   if (begin < end) {
-    expected_size = (end - begin)*series_names.size();
+    expected_size = (end - begin) * series_names.size();
   } else {
     // because we will read data in (end, begin] range but
     // fill data in [end, begin) range
-    expected_size = (begin - end - 1)*series_names.size();
+    expected_size = (begin - end - 1) * series_names.size();
   }
   EXPECT_EQ(cursor.samples.size(), expected_size);
   std::vector<Timestamp> expected;
@@ -430,7 +423,7 @@ void test_storage_read_query(Timestamp begin, Timestamp end, OrderBy order) {
       expected.push_back(ts);
     }
   } else {
-    for (Timestamp ts = begin-1; ts > end; ts--) {
+    for (Timestamp ts = begin - 1; ts > end; ts--) {
       expected.push_back(ts);
     }
   }
