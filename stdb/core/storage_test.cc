@@ -53,7 +53,7 @@ std::shared_ptr<ColumnStore> create_cstore() {
   return cstore;
 }
 
-std::shared_ptr<Storage> create_storage(bool start_worker=false) {
+std::shared_ptr<Storage> create_storage(bool start_worker = false) {
   auto meta = create_metadatastorage();
   auto bstore = BlockStoreBuilder::create_memstore();
   auto cstore = create_cstore();
@@ -2010,7 +2010,6 @@ TEST(TestStorage, Test_group_aggregate_join_query_0) {
     EXPECT_TRUE(cursor.done);
     EXPECT_EQ(cursor.error, common::Status::QueryParsingError());
   }
-
 }
 
 }  // namespace stdb
