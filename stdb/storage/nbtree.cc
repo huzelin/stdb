@@ -2605,7 +2605,10 @@ static void dump_subtree_ref(std::ostream& stream,
   }
 }
 
-void NBTreeLeafExtent::debug_dump(std::ostream& stream, int base_indent, std::function<std::string(Timestamp)> tsformat, u32 mask) const {
+void NBTreeLeafExtent::debug_dump(std::ostream& stream,
+                                  int base_indent,
+                                  std::function<std::string(Timestamp)> tsformat,
+                                  u32 mask) const {
   SubtreeRef const* ref = leaf_->get_leafmeta();
   stream << std::string(static_cast<size_t>(base_indent), '\t') <<  "<node>\n";
   dump_subtree_ref(stream, ref, leaf_->get_prev_addr(), base_indent + 1, leaf_->get_addr(), tsformat, mask);
@@ -2654,7 +2657,7 @@ std::tuple<bool, LogicAddr> NBTreeLeafExtent::commit(bool final) {
   status = init_subtree_from_leaf(*leaf_, payload);
   if (!status.IsOk()) {
     LOG(FATAL) << "Can summarize leaf-node - " << status.ToString()
-        << " id=" << id_ << " last=" << last_ << " payload=" << payload;
+        << " id=" << id_ << " last=" << last_ << " payload=" << to_string(payload);
   }
   payload.addr = addr;
   bool parent_saved = false;
@@ -2872,7 +2875,10 @@ struct NBTreeSBlockExtent : NBTreeExtent {
   virtual std::tuple<bool, LogicAddr> split(Timestamp pivot) override;
 };
 
-void NBTreeSBlockExtent::debug_dump(std::ostream& stream, int base_indent, std::function<std::string(Timestamp)> tsformat, u32 mask) const {
+void NBTreeSBlockExtent::debug_dump(std::ostream& stream,
+                                    int base_indent,
+                                    std::function<std::string(Timestamp)> tsformat,
+                                    u32 mask) const {
   SubtreeRef const* ref = curr_->get_sblockmeta();
   stream << std::string(static_cast<size_t>(base_indent), '\t') <<  "<node>\n";
   dump_subtree_ref(stream, ref, curr_->get_prev_addr(), base_indent + 1, curr_->get_addr(), tsformat, mask);
@@ -2913,7 +2919,7 @@ void NBTreeSBlockExtent::debug_dump(std::ostream& stream, int base_indent, std::
   stack.push(std::make_tuple(0, Action::OPEN_CHILDREN, base_indent + 1));
 
   // Tree traversal (depth first)
-  while(!stack.empty()) {
+  while (!stack.empty()) {
     LogicAddr addr;
     Action action;
     int indent;
@@ -3475,7 +3481,7 @@ NBTreeAppendResult NBTreeExtentsList::append(Timestamp ts, double value, bool al
   if (addr != EMPTY_ADDR) {
     // We need to clear the rescue point since the address is already
     // persisted.
-    //addr = parent_saved ? EMPTY_ADDR : addr;
+    // addr = parent_saved ? EMPTY_ADDR : addr;
     if (rescue_points_.size() > 0) {
       rescue_points_.at(0) = addr;
     } else {
