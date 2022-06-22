@@ -167,7 +167,7 @@ TEST(TestQueryParser, Test_scan_query) {
 
 static std::string make_select_meta_query() {
   std::stringstream ss;
-  ss << "{ \"select\": \"meta:names:test\",";
+  ss << "{ \"select\": \"meta:namestest\",";
   ss << "   \"where\":" << "[ { \"tag1\" : \"1\" }, { \"tag1\": \"2\" } ]";
   ss << "}";
   return ss.str();

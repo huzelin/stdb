@@ -45,6 +45,16 @@ cc_test(
 )
 
 cc_test(
+  name = "storage_test",
+  srcs = ["storage_test.cc"],
+  deps = [
+    "@gtest//:gtest",
+    "@gtest//:gtest_main",
+    ":core",
+  ],
+)
+
+cc_test(
   name = "stdb_test",
   srcs = ["stdb_test.cc"],
   deps = [
