@@ -622,10 +622,9 @@ InputLog::InputLog(LogSequencer* sequencer, const char* rootdir, size_t nvol, si
     , max_volumes_(nvol)
     , volume_size_(svol)
     , stream_id_(stream_id)
-    , sequencer_(sequencer)
-{
+    , sequencer_(sequencer) {
   std::string path = get_volume_name();
-  LOG(INFO) << std::string("Open input log ") + std::to_string(stream_id) + " for logging.";
+  LOG(INFO) << "Open input log " << stream_id << " for logging.";
   add_volume(path);
 }
 
@@ -635,9 +634,8 @@ InputLog::InputLog(const char* rootdir, u32 stream_id)
     , max_volumes_(0)
     , volume_size_(0)
     , stream_id_(stream_id)
-    , sequencer_(nullptr)
-{
-  LOG(INFO) << std::string("Open input log ") + std::to_string(stream_id) + " for recovery.";
+    , sequencer_(nullptr) {
+  LOG(INFO) << "Open input log " << stream_id << " for recovery.";
   find_volumes();
   open_volumes();
 }

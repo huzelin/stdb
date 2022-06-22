@@ -2653,7 +2653,8 @@ std::tuple<bool, LogicAddr> NBTreeLeafExtent::commit(bool final) {
   SubtreeRef payload = INIT_SUBTREE_REF;
   status = init_subtree_from_leaf(*leaf_, payload);
   if (!status.IsOk()) {
-    LOG(FATAL) << "Can summarize leaf-node - " << status.ToString() << " id=" << id_ << " last=" << last_ << " payload=" << to_string(payload);
+    LOG(FATAL) << "Can summarize leaf-node - " << status.ToString()
+        << " id=" << id_ << " last=" << last_ << " payload=" << payload;
   }
   payload.addr = addr;
   bool parent_saved = false;
