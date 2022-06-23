@@ -10,8 +10,6 @@
 #include "stdb/query/queryparser.h"
 #include "stdb/query/queryprocessor_framework.h"
 
-#include "stdb/core/stdb.h"
-
 // To initialize apr and sqlite properly
 #include <apr.h>
 #include <sqlite3.h>

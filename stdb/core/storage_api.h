@@ -121,6 +121,11 @@ class STDBConnection : public DbConnection {
                                            u64 volume_size, bool allocate);
 };
 
+struct Utils {
+  // parse timestamp.
+  static common::Status parse_timestamp(const char* iso_str, Sample* sample);
+};
+
 }  // namespace stdb
 
 #endif  // STDB_CORE_STORAGE_API_H_

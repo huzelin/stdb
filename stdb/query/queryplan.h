@@ -30,7 +30,7 @@ struct IQueryPlan {
 
   /** Read samples in batch.
    * Samples can be of variable size.
-   * @param dest is a pointer to buffer that will receive series of aku_Sample values
+   * @param dest is a pointer to buffer that will receive series of Sample values
    * @param size is a size of the buffer in bytes
    * @return status of the operation (success or error code) and number of written bytes
    */

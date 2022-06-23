@@ -9,6 +9,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
+#include "stdb/common/datetime.h"
 #include "stdb/core/cursor.h"
 #include "stdb/core/storage.h"
 
@@ -139,6 +140,15 @@ common::Status STDBConnection::create_database_ex(
     const char* volumes_path, i32 num_volumes,
     u64 volume_size, bool allocate) {
   return Storage::new_database(base_file_name, metadata_path, volumes_path, num_volumes, volume_size, allocate);
+}
+
+common::Status Utils::parse_timestamp(const char* iso_str, Sample* sample) {
+  try {
+    sample->timestamp = DateTimeUtil::from_iso_string(iso_str);
+  } catch (...) {
+    return common::Status::BadArg();
+  }
+  return common::Status::Ok();
 }
 
 }  // namespace stdb

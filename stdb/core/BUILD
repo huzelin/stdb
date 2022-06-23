@@ -6,14 +6,14 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 cc_library(
   name = "core",
   srcs = [
-    "stdb.cc",
+    #"stdb.cc",
     "cursor.cc",
     "metadatastorage.cc",
     "storage.cc",
     "storage_api.cc",
   ],
   hdrs = [
-    "stdb.h",
+    #"stdb.h",
     "cursor.h",
     "metadatastorage.h",
     "storage.h",
@@ -56,12 +56,12 @@ cc_test(
   ],
 )
 
-cc_test(
-  name = "stdb_test",
-  srcs = ["stdb_test.cc"],
-  deps = [
-    "@gtest//:gtest",
-    "@gtest//:gtest_main",
-    ":core",
-  ],
-)
+#cc_test(
+#  name = "stdb_test",
+#  srcs = ["stdb_test.cc"],
+#  deps = [
+#    "@gtest//:gtest",
+#    "@gtest//:gtest_main",
+#    ":core",
+#  ],
+#)

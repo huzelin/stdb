@@ -14,8 +14,8 @@ namespace stdb {
 struct ExternalCursor {
 
   /** New read interface for variably sized samples.
-   * @param buffer is an array of aku_Sample structs
-   * @param item_size defines size of each struct 0 - size = sizeof(aku_Sample)
+   * @param buffer is an array of Sample structs
+   * @param item_size defines size of each struct 0 - size = sizeof(Sample)
    * @param buffer_size defines size of the buffer in bytes (should be a multiple of item_size)
    * @return number of overwritten bytes in `buffer`
    */
