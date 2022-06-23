@@ -151,7 +151,7 @@ RESPProtocolParser::RESPProtocolParser(std::shared_ptr<DbSession> consumer)
     , consumer_(consumer) { }
 
 void RESPProtocolParser::start() {
-  LOG(INFO) << "Starting protocol parser";
+  // LOG(INFO) << "Starting protocol parser";
 }
 
 bool RESPProtocolParser::parse_timestamp(RESPStream& stream, Sample& sample) {

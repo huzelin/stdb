@@ -21,7 +21,7 @@ RESPStream::Type RESPStream::next_type() const {
   }
   auto ch = stream_->pick();
   Type result = _BAD;
-  switch(ch) {
+  switch (ch) {
     case '+':
       result = STRING;
       break;
@@ -50,7 +50,7 @@ std::tuple<bool, u64> RESPStream::_read_int_body() {
   u64 result = 0;
   int res = stream_->read_line(buf, MAX_DIGITS);
   if (res <= 0) {
-    if (res == -1*MAX_DIGITS) {
+    if (res == -1 * MAX_DIGITS) {
       // Invalid input, too many digits in the number
       auto ctx = stream_->get_error_context("integer is too long");
       throw RESPError(std::get<0>(ctx), std::get<1>(ctx));
@@ -59,7 +59,7 @@ std::tuple<bool, u64> RESPStream::_read_int_body() {
   }
   for (int i = 0; i < res; i++) {
     Byte c = buf[i];
-    // c must be in [0x30:0x39] range
+    // c must be in [0x30 : 0x39] range
     if (c <= 0x39 && c >= 0x30) {
       static const u64 max_u64 = std::numeric_limits<u64>::max();
       static const u64 max_mul = std::numeric_limits<u64>::max() / 10;
@@ -164,7 +164,7 @@ std::tuple<bool, int> RESPStream::read_bulkstr(Byte *buffer, size_t buffer_size)
   }
   if (n > buffer_size) {
     // buffer is too small
-    return std::make_tuple(false, -1*static_cast<int>(n));
+    return std::make_tuple(false, -1 * static_cast<int>(n));
   }
   int nread = stream_->read(buffer, n);
   if (nread < static_cast<int>(n)) {  // Safe to cast this way because n <= BULK_LENGTH_MAX
