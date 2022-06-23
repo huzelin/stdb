@@ -60,7 +60,6 @@ void test_nbtree_roots_collection(u32 N, u32 begin, u32 end) {
   std::tie(status, sz) = it->read(ts.data(), xs.data(), outsz);
 
   EXPECT_EQ(sz, outsz);
-
   EXPECT_EQ(status, common::Status::Ok());
 
   if (dir == ScanDir::FWD) {
@@ -83,7 +82,6 @@ void test_nbtree_roots_collection(u32 N, u32 begin, u32 end) {
         LOG(FATAL) << "Invalid value at " << i << ", expected: " << curr << ", actual: " << xs[i];
       }
     }
-
   }
 }
 

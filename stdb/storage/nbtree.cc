@@ -3783,9 +3783,8 @@ void NBTreeExtentsList::init() {
     // Tree should be opened normally.
     if (rstat == RepairStatus::OK) {
       open();
-    }
-    // Tree should be restored (crush recovery kicks in here).
-    else {
+    } else {
+      // Tree should be restored (crush recovery kicks in here).
       repair();
     }
   }
