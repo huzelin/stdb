@@ -214,33 +214,6 @@ class IOVecLeaf {
 
   //! Group-aggregate query results iterator
   std::unique_ptr<AggregateOperator> group_aggregate(Timestamp begin, Timestamp end, u64 step) const;
-
-  // Node split experiment //
-
-  /**
-   * @brief Split the node into the specified top node
-   * @param bstore is a pointer to blockstore
-   * @param pivot is a pivot point of the split
-   * @param preserve_backrefs is a flag that controls the backrefs (ignored)
-   * @param top_level is a top level node (the method will add links to this node
-   *        instead of creating new inner node, the commit method of the `top_level` node wouldn't be called)
-   * @return status and address of the new topmost node (always EMPTY_ADDR)
-   */
-  std::tuple<common::Status, LogicAddr> split_into(std::shared_ptr<BlockStore> bstore,
-                                                   Timestamp pivot,
-                                                   bool preserve_backrefs, u16 *fanout_index,
-                                                   SuperblockAppender* top_level);
-
-  /**
-   * @brief Split the node
-   * @param bstore is a pointer to blockstore
-   * @param pivot is a pivot point of the split
-   * @param preserve_backrefs is a flag that controls the backrefs (ignored)
-   * @return status and address of the new topmost node
-   */
-  std::tuple<common::Status, LogicAddr> split(std::shared_ptr<BlockStore> bstore,
-                                              Timestamp pivot,
-                                              bool preserve_backrefs);
 };
 
 
@@ -331,36 +304,7 @@ class IOVecSuperblock : public SuperblockAppender {
                                                      Timestamp end,
                                                      u64 step,
                                                      std::shared_ptr<BlockStore> bstore) const;
-
-  // Node split experiment //
-  /**
-   * @brief Split the node (the results are copied to the provided node)
-   * @param bstore is a link to backstore
-   * @param pivot is a timestamp to pivot
-   * @param preserve_horizontal_links is a flag that should be set to true to preserve the backrefs correctness (only
-   *        needed for the topmost node)
-   * @param root is a new root node (all content of this node will be copied there alongside the updated refs)
-   * @return status, address of the last child (if preserve_horizontal_links was set to true)
-   */
-  std::tuple<common::Status, LogicAddr> split_into(std::shared_ptr<BlockStore> bstore,
-                                                   Timestamp pivot,
-                                                   bool preserve_horizontal_links,
-                                                   SuperblockAppender *root);
-
-  /**
-   * @brief Split the node
-   * @param bstore is a link to backstore
-   * @param pivot is a timestamp to pivot
-   * @param preserve_horizontal_links is a flag that should be set to true to preserve the backrefs correctness (only
-   *        needed for the topmost node)
-   * @return status, address of the current node (or empty if root was used), address of the last child (if preserve_horizontal_links
-   *         was set to true)
-   */
-  std::tuple<common::Status, LogicAddr, LogicAddr> split(std::shared_ptr<BlockStore> bstore,
-                                                         Timestamp pivot,
-                                                         bool preserve_horizontal_links);
 };
-
 
 //! NBTree extent
 struct NBTreeExtent {
@@ -421,7 +365,6 @@ struct NBTreeExtent {
   virtual std::unique_ptr<AggregateOperator> group_aggregate(Timestamp begin, Timestamp end, u64 step) const = 0;
 
   // Service functions //
-
   virtual void debug_dump(std::ostream& stream,
                           int base_indent,
                           std::function<std::string(Timestamp)> tsformat,
@@ -429,26 +372,6 @@ struct NBTreeExtent {
 
   //! Check extent's internal consitency
   static void check_extent(const NBTreeExtent *extent, std::shared_ptr<BlockStore> bstore, size_t level);
-
-  // Node split //
-  virtual std::tuple<bool, LogicAddr> split(Timestamp ts) = 0;
-
-  /**
-   * @brief Updates address of the previous element (used by split)
-   * @param addr is an address of the prev element for the newly created node
-   * @return error code
-   */
-  virtual common::Status update_prev_addr(LogicAddr addr) = 0;
-
-  /**
-   * @brief  Update current fanout index of the extent.
-   * @note   Fanout of the extent is a position of the current extent in the next extent, this position can change
-   *         due to split procedure. If split in the i+1 extent resulted in higher occupancy the i-th extent should
-   *         get an increased fanout index.
-   * @param  fanout_index is a new fanout index
-   * @return status
-   */
-  virtual common::Status update_fanout_index(u16 fanout_index) = 0;
 };
 
 
@@ -467,6 +390,7 @@ enum class NBTreeAppendResult {
  * @li create new roots lazily (NBTree starts with only one root and rarely goes above 2)
  */
 class NBTreeExtentsList : public std::enable_shared_from_this<NBTreeExtentsList> {
+ protected:
   std::shared_ptr<BlockStore> bstore_;
   std::vector<std::unique_ptr<NBTreeExtent>> extents_;
   const ParamId id_;
@@ -476,31 +400,11 @@ class NBTreeExtentsList : public std::enable_shared_from_this<NBTreeExtentsList>
   bool initialized_;
   //! Number of write operations performed on object
   u64 write_count_;
-
-  void open();
-
-  void repair();
-
-  void init();
-
   mutable common::RWLock lock_;
 
-  // Testing
-#ifdef ENABLE_MUTATION_TESTING
-  std::random_device              rd_;
-  std::mt19937                    rand_gen_;
-  std::uniform_int_distribution<> dist_;
-  const int                       threshold_;
-
-
-  LogicAddr split_random_node(u32 ix);
-
-  u32 chose_random_node();
-#endif
-
-  std::tuple<common::Status, AggregationResult> get_aggregates(u32 ixnode) const;
-
-  void check_rescue_points(u32 i) const;
+  void open();
+  void repair();
+  void init();
 
  public:
   /** C-tor

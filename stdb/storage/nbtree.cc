@@ -1922,115 +1922,6 @@ std::unique_ptr<AggregateOperator> IOVecLeaf::group_aggregate(Timestamp begin, T
   return it;
 }
 
-std::tuple<common::Status, LogicAddr> IOVecLeaf::split_into(std::shared_ptr<BlockStore> bstore,
-                                                            Timestamp pivot,
-                                                            bool preserve_backrefs,
-                                                            u16 *fanout_index,
-                                                            SuperblockAppender *top_level) {
-  /* When the method is called from IOVecSuperblock::split method, the
-   * top_level node will be provided. Otherwise it will be null.
-   */
-  common::Status status;
-  std::vector<double> xss;
-  std::vector<Timestamp> tss;
-  status = read_all(&tss, &xss);
-  if (!status.IsOk() || tss.size() == 0) {
-    return std::make_tuple(status, EMPTY_ADDR);
-  }
-  // Make new superblock with two leafs
-  // Left hand side leaf node
-  u32 ixbase = 0;
-  IOVecLeaf lhs(get_id(), preserve_backrefs ? prev_ : EMPTY_ADDR, *fanout_index);
-  for (u32 i = 0; i < tss.size(); i++) {
-    if (tss[i] < pivot) {
-      status = lhs.append(tss[i], xss[i]);
-      if (!status.IsOk()) {
-        return std::make_tuple(status, EMPTY_ADDR);
-      }
-    } else {
-      ixbase = i;
-      break;
-    }
-  }
-  SubtreeRef lhs_ref;
-  if (ixbase == 0) {
-    // Special case, the lhs node is empty
-    lhs_ref.addr = EMPTY_ADDR;
-  } else {
-    LogicAddr lhs_addr;
-    std::tie(status, lhs_addr) = lhs.commit(bstore);
-    if (!status.IsOk()) {
-      return std::make_tuple(status, EMPTY_ADDR);
-    }
-    status = init_subtree_from_leaf(lhs, lhs_ref);
-    if (!status.IsOk()) {
-      return std::make_tuple(status, EMPTY_ADDR);
-    }
-    lhs_ref.addr = lhs_addr;
-    (*fanout_index)++;
-  }
-  // Right hand side leaf node, it can't be empty in any case
-  // because the leaf node is not empty.
-  auto prev = lhs_ref.addr == EMPTY_ADDR ? prev_ : lhs_ref.addr;
-  IOVecLeaf rhs(get_id(), prev, *fanout_index);
-  for (u32 i = ixbase; i < tss.size(); i++) {
-    status = rhs.append(tss[i], xss[i]);
-    if (!status.IsOk()) {
-      return std::make_tuple(status, EMPTY_ADDR);
-    }
-  }
-  SubtreeRef rhs_ref;
-  if (ixbase == tss.size()) {
-    // Special case, rhs is empty
-    rhs_ref.addr = EMPTY_ADDR;
-  } else {
-    LogicAddr rhs_addr;
-    std::tie(status, rhs_addr) = rhs.commit(bstore);
-    if (!status.IsOk()) {
-      return std::make_tuple(status, EMPTY_ADDR);
-    }
-    status = init_subtree_from_leaf(rhs, rhs_ref);
-    if (!status.IsOk()) {
-      return std::make_tuple(status, EMPTY_ADDR);
-    }
-    rhs_ref.addr = rhs_addr;
-    (*fanout_index)++;
-  }
-  // Superblock
-  if (lhs_ref.addr != EMPTY_ADDR) {
-    status = top_level->append(lhs_ref);
-    if (!status.IsOk()) {
-      return std::make_tuple(status, EMPTY_ADDR);
-    }
-  }
-  if (rhs_ref.addr != EMPTY_ADDR) {
-    status = top_level->append(rhs_ref);
-    if (!status.IsOk()) {
-      return std::make_tuple(status, EMPTY_ADDR);
-    }
-  }
-  return std::make_tuple(common::Status::Ok(), EMPTY_ADDR);
-}
-
-std::tuple<common::Status, LogicAddr> IOVecLeaf::split(std::shared_ptr<BlockStore> bstore,
-                                                       Timestamp pivot,
-                                                       bool preserve_backrefs) {
-  // New superblock
-  IOVecSuperblock sblock(get_id(), preserve_backrefs ? get_prev_addr() : EMPTY_ADDR, get_fanout(), 0);
-  common::Status status;
-  LogicAddr  addr;
-  u16 fanout = 0;
-  std::tie(status, addr) = split_into(bstore, pivot, false, &fanout, &sblock);
-  if (!status.IsOk() || sblock.nelements() == 0) {
-    return std::make_tuple(status, EMPTY_ADDR);
-  }
-  std::tie(status, addr) = sblock.commit(bstore);
-  if (!status.IsOk()) {
-    return std::make_tuple(status, EMPTY_ADDR);
-  }
-  return std::make_tuple(common::Status::Ok(), addr);
-}
-
 IOVecSuperblock::IOVecSuperblock(ParamId id, LogicAddr prev, u16 fanout, u16 lvl)
     : block_(new IOVecBlock())
     , id_(id)
@@ -2256,156 +2147,6 @@ std::unique_ptr<AggregateOperator> IOVecSuperblock::group_aggregate(Timestamp be
   return result;
 }
 
-std::tuple<common::Status, LogicAddr> IOVecSuperblock::split_into(std::shared_ptr<BlockStore> bstore,
-                                                                  Timestamp pivot,
-                                                                  bool preserve_horizontal_links,
-                                                                  SuperblockAppender *root) {
-  // for each node in BFS order:
-  //      if pivot is inside the node:
-  //          node.split() <-- recursive call
-  //      else if top_level_node and node is on the right from pivot:
-  //          node.clone().fix_horizontal_link()
-  std::vector<SubtreeRef> refs;
-  common::Status status = read_all(&refs);
-  if (!status.IsOk() || refs.empty()) {
-    return std::make_tuple(status, EMPTY_ADDR);
-  }
-  for (u32 i = 0; i < refs.size(); i++) {
-    if (refs[i].begin <= pivot && pivot <= refs[i].end) {
-      // Do split the node
-      LogicAddr new_ith_child_addr = EMPTY_ADDR;
-      u16 current_fanout = 0;
-      // Clone current node
-      for (u32 j = 0; j < i; j++) {
-        root->append(refs[j]);
-        current_fanout++;
-      }
-      std::unique_ptr<IOVecBlock> block;
-      std::tie(status, block) = read_and_check(bstore, refs[i].addr);
-      if (!status.IsOk()) {
-        return std::make_tuple(status, EMPTY_ADDR);
-      }
-      auto refsi = block->get_cheader<SubtreeRef>();
-      assert(refsi->count == refs[i].count);
-      assert(refsi->type  == refs[i].type);
-      assert(refsi->begin == refs[i].begin);
-      UNUSED(refsi);
-      if (refs[i].type == NBTreeBlockType::INNER) {
-        IOVecSuperblock sblock(std::move(block));
-        LogicAddr ignored;
-        std::tie(status, new_ith_child_addr, ignored) = sblock.split(bstore, pivot, false);
-        if (!status.IsOk()) {
-          return std::make_tuple(status, EMPTY_ADDR);
-        }
-      } else {
-        IOVecLeaf oldleaf(std::move(block));
-        if ((refs.size() - NBTREE_FANOUT) > 1) {
-          // Split in-place
-          std::tie(status, new_ith_child_addr) = oldleaf.split_into(bstore, pivot, preserve_horizontal_links, &current_fanout, root);
-          if (!status.IsOk()) {
-            return std::make_tuple(status, EMPTY_ADDR);
-          }
-        } else {
-          // Create new level in the tree
-          std::tie(status, new_ith_child_addr) = oldleaf.split(bstore, pivot, preserve_horizontal_links);
-          if (!status.IsOk()) {
-            return std::make_tuple(status, EMPTY_ADDR);
-          }
-        }
-      }
-      if (new_ith_child_addr != EMPTY_ADDR) {
-        SubtreeRef newref;
-        auto block = read_iovec_block_from_bstore(bstore, new_ith_child_addr);
-        IOVecSuperblock child(std::move(block));
-        status = init_subtree_from_subtree(child, newref);
-        if (!status.IsOk()) {
-          return std::make_tuple(status, EMPTY_ADDR);
-        }
-        newref.addr = new_ith_child_addr;
-        root->append(newref);
-        current_fanout++;
-      }
-      LogicAddr last_child_addr;
-      if (!root->top(&last_child_addr)) {
-        LOG(FATAL) << "Attempt to split an empty node";
-      }
-      if (preserve_horizontal_links) {
-        // Fix backrefs on the right from the pivot
-        // Move from left to right and clone the blocks fixing
-        // the back references.
-        for (u32 j = i + 1; j < refs.size(); j++) {
-          if (refs[j].type == NBTreeBlockType::INNER) {
-            IOVecSuperblock cloned_child(refs[j].addr, bstore, false);
-            cloned_child.set_prev_addr(last_child_addr);
-            cloned_child.set_node_fanout(current_fanout);
-            current_fanout++;
-            std::tie(status, last_child_addr) = cloned_child.commit(bstore);
-            if (!status.IsOk()) {
-              return std::make_tuple(status, EMPTY_ADDR);
-            }
-            SubtreeRef backref;
-            status = init_subtree_from_subtree(cloned_child, backref);
-            if (!status.IsOk()) {
-              return std::make_tuple(status, EMPTY_ADDR);
-            }
-            backref.addr = last_child_addr;
-            status = root->append(backref);
-            if (!status.IsOk()) {
-              return std::make_tuple(status, EMPTY_ADDR);
-            }
-          } else {
-            std::unique_ptr<IOVecBlock> child_block;
-            std::tie(status, child_block) = read_and_check(bstore, refs[j].addr);
-            IOVecLeaf cloned_child(std::move(child_block), IOVecLeaf::CloneTag());
-            cloned_child.set_prev_addr(last_child_addr);
-            cloned_child.set_node_fanout(current_fanout);
-            current_fanout++;
-            std::tie(status, last_child_addr) = cloned_child.commit(bstore);
-            if (!status.IsOk()) {
-              return std::make_tuple(status, EMPTY_ADDR);
-            }
-            SubtreeRef backref;
-            status = init_subtree_from_leaf(cloned_child, backref);
-            if (!status.IsOk()) {
-              return std::make_tuple(status, EMPTY_ADDR);
-            }
-            backref.addr = last_child_addr;
-            status = root->append(backref);
-            if (!status.IsOk()) {
-              return std::make_tuple(status, EMPTY_ADDR);
-            }
-          }
-        }
-      } else {
-        for (u32 j = i+1; j < refs.size(); j++) {
-          root->append(refs[j]);
-        }
-      }
-      return std::tie(status, last_child_addr);
-    }
-  }
-  // The pivot point is not found
-  return std::make_tuple(common::Status::NotFound(""), EMPTY_ADDR);
-}
-
-std::tuple<common::Status, LogicAddr, LogicAddr> IOVecSuperblock::split(std::shared_ptr<BlockStore> bstore,
-                                                                        Timestamp pivot,
-                                                                        bool preserve_horizontal_links) {
-  common::Status status;
-  LogicAddr last_child;
-  IOVecSuperblock new_sblock(id_, prev_, get_fanout(), level_);
-  std::tie(status, last_child) = split_into(bstore, pivot, preserve_horizontal_links, &new_sblock);
-  if (!status.IsOk() || new_sblock.nelements() == 0) {
-    return std::make_tuple(status, EMPTY_ADDR, EMPTY_ADDR);
-  }
-  LogicAddr newaddr = EMPTY_ADDR;
-  std::tie(status, newaddr) = new_sblock.commit(bstore);
-  if (!status.IsOk()) {
-    return std::make_tuple(status, EMPTY_ADDR, EMPTY_ADDR);
-  }
-  return std::tie(status, newaddr, last_child);
-}
-
 //! Represents extent made of one memory resident leaf node
 struct NBTreeLeafExtent : NBTreeExtent {
   std::shared_ptr<BlockStore> bstore_;
@@ -2463,25 +2204,6 @@ struct NBTreeLeafExtent : NBTreeExtent {
     return ExtentStatus::OK;
   }
 
-  virtual common::Status update_prev_addr(LogicAddr addr) override {
-    if (leaf_->get_addr() == EMPTY_ADDR) {
-      leaf_->set_prev_addr(addr);
-      return common::Status::Ok();
-    }
-    // This can happen due to concurrent access
-    return common::Status::Ok();
-  }
-
-  virtual common::Status update_fanout_index(u16 fanout_index) override {
-    if (leaf_->get_addr() == EMPTY_ADDR) {
-      leaf_->set_node_fanout(fanout_index);
-      fanout_index_ = fanout_index;
-      return common::Status::Ok();
-    }
-    // This can happen due to concurrent access
-    return common::Status::Ok();
-  }
-
   common::Status get_prev_subtreeref(SubtreeRef &payload) {
     common::Status status;
     std::unique_ptr<IOVecBlock> block;
@@ -2515,7 +2237,6 @@ struct NBTreeLeafExtent : NBTreeExtent {
   virtual std::unique_ptr<AggregateOperator> group_aggregate(Timestamp begin, Timestamp end, u64 step) const override;
   virtual bool is_dirty() const override;
   virtual void debug_dump(std::ostream& stream, int base_indent, std::function<std::string(Timestamp)> tsformat, u32 mask) const override;
-  virtual std::tuple<bool, LogicAddr> split(Timestamp pivot) override;
 };
 
 static void dump_subtree_ref(std::ostream& stream,
@@ -2719,50 +2440,6 @@ bool NBTreeLeafExtent::is_dirty() const {
   return false;
 }
 
-std::tuple<bool, LogicAddr> NBTreeLeafExtent::split(Timestamp pivot) {
-  common::Status status;
-  LogicAddr addr;
-  std::tie(status, addr) = leaf_->split(bstore_, pivot, true);
-  if (!status.IsOk() || addr == EMPTY_ADDR) {
-    return std::make_tuple(false, EMPTY_ADDR);
-  }
-  auto block = read_iovec_block_from_bstore(bstore_, addr);
-  IOVecSuperblock sblock(std::move(block));
-  // Gather stats and send them to upper-level node
-  SubtreeRef payload = INIT_SUBTREE_REF;
-  status = init_subtree_from_subtree(sblock, payload);
-  if (!status.IsOk()) {
-    // This shouldn't happen because sblock can't be empty, it contains
-    // two or one child element.
-    LOG(FATAL) << "Can summarize leaf-node - " << status.ToString()
-        << ", id=" << id_
-        << ", fanout=" << fanout_index_
-        << ", last=" << last_;
-  }
-  payload.addr = addr;
-  bool parent_saved = false;
-  auto roots_collection = roots_.lock();
-  if (roots_collection) {
-    parent_saved = roots_collection->append(payload);
-  } else {
-    // Invariant broken.
-    // Roots collection was destroyed before write process
-    // stops.
-    LOG(FATAL) << "Roots collection destroyed"
-        << ", id=" << id_
-        << ", fanout=" << fanout_index_
-        << ", last=" << last_;
-  }
-  fanout_index_++;
-  last_ = addr;
-  if (fanout_index_ == NBTREE_FANOUT) {
-    fanout_index_ = 0;
-    last_ = EMPTY_ADDR;
-  }
-  reset_leaf();
-  return std::make_tuple(parent_saved, addr);
-}
-
 struct NBTreeSBlockExtent : NBTreeExtent {
   std::shared_ptr<BlockStore> bstore_;
   std::weak_ptr<NBTreeExtentsList> roots_;
@@ -2827,23 +2504,6 @@ struct NBTreeSBlockExtent : NBTreeExtent {
     return ExtentStatus::OK;
   }
 
-  virtual common::Status update_prev_addr(LogicAddr addr) override {
-    if (curr_->get_addr() == EMPTY_ADDR) {
-      curr_->set_prev_addr(addr);
-      return common::Status::Ok();
-    }
-    return common::Status::EAccess("");
-  }
-
-  virtual common::Status update_fanout_index(u16 fanout_index) override {
-    if (curr_->get_addr() == EMPTY_ADDR) {
-      curr_->set_node_fanout(fanout_index);
-      fanout_index_ = fanout_index;
-      return common::Status::Ok();
-    }
-    return common::Status::EAccess("");
-  }
-
   void reset_subtree() {
     curr_.reset(new IOVecSuperblock(id_, last_, fanout_index_, level_));
   }
@@ -2872,7 +2532,6 @@ struct NBTreeSBlockExtent : NBTreeExtent {
   virtual std::unique_ptr<AggregateOperator> group_aggregate(Timestamp begin, Timestamp end, u64 step) const override;
   virtual bool is_dirty() const override;
   virtual void debug_dump(std::ostream& stream, int base_indent, std::function<std::string(Timestamp)> tsformat, u32 mask) const override;
-  virtual std::tuple<bool, LogicAddr> split(Timestamp pivot) override;
 };
 
 void NBTreeSBlockExtent::debug_dump(std::ostream& stream,
@@ -3072,21 +2731,6 @@ bool NBTreeSBlockExtent::is_dirty() const {
   return false;
 }
 
-std::tuple<bool, LogicAddr> NBTreeSBlockExtent::split(Timestamp pivot) {
-  const auto empty_res = std::make_tuple(false, EMPTY_ADDR);
-  common::Status status;
-  std::unique_ptr<IOVecSuperblock> clone;
-  clone.reset(new IOVecSuperblock(id_, curr_->get_prev_addr(), curr_->get_fanout(), curr_->get_level()));
-  LogicAddr last_child_addr;
-  std::tie(status, last_child_addr) = curr_->split_into(bstore_, pivot, true, clone.get());
-  // The addr variable should be empty, because we're using the clone
-  if (!status.IsOk()) {
-    return empty_res;
-  }
-  curr_.swap(clone);
-  return std::make_tuple(false, last_child_addr);
-}
-
 template<class SuperblockT>
 static void check_superblock_consistency(std::shared_ptr<BlockStore> bstore,
                                          SuperblockT const* sblock,
@@ -3230,14 +2874,7 @@ NBTreeExtentsList::NBTreeExtentsList(ParamId id, std::vector<LogicAddr> addresse
     , last_(0ull)
     , rescue_points_(std::move(addresses))
     , initialized_(false)
-    , write_count_(0ul)
-#ifdef ENABLE_MUTATION_TESTING
-    , rd_()
-    , rand_gen_(rd_())
-    , dist_(0, 1000)
-    , threshold_(1)
-#endif
-{
+    , write_count_(0ul) {
   if (rescue_points_.size() >= std::numeric_limits<u16>::max()) {
     LOG(FATAL) << "Tree depth is too large";
   }
@@ -3290,110 +2927,6 @@ std::vector<NBTreeExtent const*> NBTreeExtentsList::get_extents() const {
     result.push_back(ptr.get());
   }
   return result;
-}
-
-#ifdef ENABLE_MUTATION_TESTING
-u32 NBTreeExtentsList::chose_random_node() {
-  std::uniform_int_distribution<u32> rext(0, static_cast<u32>(extents_.size() - 1));
-  u32 ixnode = rext(rand_gen_);
-  return ixnode;
-}
-#endif
-
-std::tuple<common::Status, AggregationResult> NBTreeExtentsList::get_aggregates(u32 ixnode) const {
-  auto it = extents_.at(ixnode)->aggregate(0, STDB_MAX_TIMESTAMP);
-  Timestamp ts;
-  AggregationResult dest;
-  size_t outsz;
-  common::Status status;
-  std::tie(status, outsz) = it->read(&ts, &dest, 1);
-  if (outsz == 0) {
-    LOG(ERROR) << "Can't split the node: no data returned from aggregate query";
-    return std::make_tuple(common::Status::NotFound(""), dest);
-  }
-  if (!status.IsOk() && status.Code() != common::Status::kNoData) {
-    LOG(ERROR) << "Can't split the node: " << status.ToString();
-  }
-  return std::make_tuple(common::Status::Ok(), dest);
-}
-
-#ifdef ENABLE_MUTATION_TESTING
-LogicAddr NBTreeExtentsList::split_random_node(u32 ixnode) {
-  AggregationResult dest;
-  common::Status status;
-  std::tie(status, dest) = get_aggregates(ixnode);
-  if (!status.IsOk() && status.Code() != common::Status::kNoData) {
-    return EMPTY_ADDR;
-  }
-  Timestamp begin = dest._begin;
-  Timestamp end   = dest._end;
-
-  // Chose the pivot point
-  std::uniform_int_distribution<Timestamp> rsplit(begin, end);
-  Timestamp pivot = rsplit(rand_gen_);
-  LogicAddr addr;
-  bool parent_saved;
-  if (extents_.at(ixnode)->is_dirty()) {
-    std::tie(parent_saved, addr) = extents_.at(ixnode)->split(pivot);
-    return addr;
-  }
-  return EMPTY_ADDR;
-}
-#endif
-
-void NBTreeExtentsList::check_rescue_points(u32 i) const {
-  if (i == 0) {
-    return;
-  }
-  // we can use i-1 value to restore the i'th
-  LogicAddr addr = rescue_points_.at(i-1);
-
-  auto aggit = extents_.at(i)->aggregate(STDB_MIN_TIMESTAMP, STDB_MAX_TIMESTAMP);
-  Timestamp ts;
-  AggregationResult res;
-  size_t sz;
-  common::Status status;
-  std::tie(status, sz) = aggit->read(&ts, &res, 1);
-  if (sz == 0 || (!status.IsOk() && status.Code() != common::Status::kNoData)) {
-    // Failed check
-    assert(false);
-  }
-
-  IOVecSuperblock sblock(id_, EMPTY_ADDR, 0, 0);
-  std::vector<SubtreeRef> refs;
-  while (addr != EMPTY_ADDR) {
-    std::unique_ptr<IOVecBlock> block;
-    std::tie(status, block) = read_and_check(bstore_, addr);
-    if (status.Code() == common::Status::kUnavailable) {
-      // Block removed due to retention. Can't actually check anything.
-      return;
-    }
-    const SubtreeRef* ref = block->get_cheader<SubtreeRef>();
-    SubtreeRef tmp = *ref;
-    tmp.addr = addr;
-    refs.push_back(tmp);
-    addr = ref->addr;
-  }
-  for (auto it = refs.rbegin(); it < refs.rend(); it++) {
-    status = sblock.append(*it);
-    assert(status.IsOk());
-  }
-  aggit = sblock.aggregate(STDB_MIN_TIMESTAMP, STDB_MAX_TIMESTAMP, bstore_);
-  AggregationResult newres;
-  std::tie(status, sz) = aggit->read(&ts, &newres, 1);
-  if (sz == 0 || (!status.IsOk() && status.Code() != common::Status::kNoData)) {
-    // Failed check
-    assert(false);
-  }
-  assert(res._begin   == newres._begin);
-  assert(res._end     == newres._end);
-  assert(res.cnt      == newres.cnt);
-  assert(res.first    == newres.first);
-  assert(res.last     == newres.last);
-  assert(res.max      == newres.max);
-  assert(res.min      == newres.min);
-  assert(res.maxts    == newres.maxts);
-  assert(res.mints    == newres.mints);
 }
 
 NBTreeAppendResult NBTreeExtentsList::append(Timestamp ts, double value, bool allow_duplicate_timestamps) {
