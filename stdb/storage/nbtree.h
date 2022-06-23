@@ -231,7 +231,6 @@ class IOVecLeaf {
                                                    bool preserve_backrefs, u16 *fanout_index,
                                                    SuperblockAppender* top_level);
 
-
   /**
    * @brief Split the node
    * @param bstore is a pointer to blockstore
@@ -504,8 +503,6 @@ class NBTreeExtentsList : public std::enable_shared_from_this<NBTreeExtentsList>
   void check_rescue_points(u32 i) const;
 
  public:
-  std::tuple<common::Status, LogicAddr> _split(Timestamp pivot);
-
   /** C-tor
    * @param addresses List of root addresses in blockstore or list of resque points.
    * @param bstore Block-store.

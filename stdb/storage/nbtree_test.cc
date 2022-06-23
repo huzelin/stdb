@@ -378,7 +378,6 @@ void test_storage_recovery(u32 N_blocks, u32 N_values) {
   }
 
   addrlist = collection->get_roots();
-
   // delete roots collection
   collection.reset();
 
@@ -399,6 +398,7 @@ void test_storage_recovery(u32 N_blocks, u32 N_values) {
   size_t sz = 0;
   common::Status status;
   std::tie(status, sz) = it->read(ts.data(), xs.data(), nitems);
+  LOG(INFO) << "sz=" << sz << " nitems=" << nitems;
   if (addrlist.empty()) {
     // Expect zero, data was stored in single leaf-node.
     EXPECT_EQ(0, sz);

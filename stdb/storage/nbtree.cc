@@ -3396,66 +3396,6 @@ void NBTreeExtentsList::check_rescue_points(u32 i) const {
   assert(res.mints    == newres.mints);
 }
 
-std::tuple<common::Status, LogicAddr> NBTreeExtentsList::_split(Timestamp pivot) {
-  common::Status status;
-  LogicAddr paddr = EMPTY_ADDR;
-  size_t extent_index = extents_.size();
-  // Find the extent that contains the pivot
-  for (size_t i = 0; i < extents_.size(); i++) {
-    auto it = extents_.at(i)->aggregate(STDB_MIN_TIMESTAMP, STDB_MAX_TIMESTAMP);
-    AggregationResult res;
-    size_t outsz;
-    Timestamp ts;
-    std::tie(status, outsz) = it->read(&ts, &res, 1);
-    if (status.IsOk()) {
-      if (res._begin <= pivot && pivot < res._end) {
-        extent_index = i;
-      }
-      break;
-    } else if (status.Code() == common::Status::kNoData || status.Code() == common::Status::kUnavailable) {
-      continue;
-    }
-    return std::make_tuple(status, paddr);
-  }
-  if (extent_index == extents_.size()) {
-    return std::make_tuple(common::Status::NotFound(""), paddr);
-  }
-  bool parent_saved = false;
-  std::tie(parent_saved, paddr) = extents_.at(extent_index)->split(pivot);
-  if (paddr != EMPTY_ADDR) {
-    std::unique_ptr<IOVecBlock> rblock;
-    std::tie(status, rblock) = read_and_check(bstore_, paddr);
-    if (!status.IsOk()) {
-      LOG(FATAL) << "Can't read @" << std::to_string(paddr) << ", error: " << status.ToString();
-    }
-    // extent_index and the level of the node can mismatch
-    auto pnode = rblock->get_cheader<SubtreeRef>();
-    if (rescue_points_.size() > pnode->level) {
-      rescue_points_.at(pnode->level) = paddr;
-    } else {
-      rescue_points_.push_back(paddr);
-    }
-    if (extent_index > 0) {
-      u16 prev_fanout = 0;
-      LogicAddr prev_addr = EMPTY_ADDR;
-      if (pnode->fanout_index < NBTREE_MAX_FANOUT_INDEX) {
-        prev_fanout = pnode->fanout_index + 1;
-        prev_addr   = paddr;
-      }
-      auto prev_extent = extent_index - 1;
-      status = extents_.at(prev_extent)->update_prev_addr(prev_addr);
-      if (!status.IsOk()) {
-        LOG(FATAL) << "Invalid access pattern in split method";
-      }
-      status = extents_.at(prev_extent)->update_fanout_index(prev_fanout);
-      if (!status.IsOk()) {
-        LOG(FATAL) << "Can't update fanout index of the node";
-      }
-    }
-  }
-  return std::make_tuple(status, paddr);
-}
-
 NBTreeAppendResult NBTreeExtentsList::append(Timestamp ts, double value, bool allow_duplicate_timestamps) {
   common::UniqueLock lock(lock_);  // NOTE: NBTreeExtentsList::append(subtree) can be called from here
   //       recursively (maybe even many times).
