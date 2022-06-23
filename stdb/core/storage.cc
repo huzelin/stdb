@@ -738,15 +738,13 @@ void Storage::run_inputlog_recovery(storage::ShardedInputLog* ilog, std::vector<
         }
       }
       nsegments++;
-    }
-    else if (status == common::Status::NoData()) {
+    } else if (status == common::Status::NoData()) {
       LOG(INFO) << "WAL recovery completed";
       LOG(INFO) << std::to_string(nsegments) + " segments scanned";
       LOG(INFO) << std::to_string(visitor.nsamples) + " samples recovered";
       LOG(INFO) << std::to_string(visitor.nlost) + " samples lost";
       proceed = false;
-    }
-    else {
+    } else {
       LOG(ERROR) << "WAL recovery error: " << status.ToString();
       proceed = false;
     }

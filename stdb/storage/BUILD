@@ -114,3 +114,13 @@ cc_test(
   ],
 )
 
+cc_test(
+  name = "roaring64map_test",
+  srcs = ["roaring64map_test.cc"],
+  deps = [
+    "@gtest//:gtest",
+    "@gtest//:gtest_main",
+    ":storage",
+  ],
+)
+

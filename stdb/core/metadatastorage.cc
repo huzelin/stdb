@@ -202,7 +202,7 @@ void MetadataStorage::init_config(const char* db_name,
   insert << "\tVALUES ('creation_datetime', '" << creation_datetime << "', " << "'DB creation time.'), "
       << "('blockstore_type', '" << bstore_type << "', " << "'Type of block storage used.'),"
 #ifdef STDB_VERSION
-      << "('storage_version', '" << STDB_VERSION << "', " << "'FastSTDB version used to create the database.'),"
+      << "('storage_version', '" << STDB_VERSION << "', " << "'STDB version used to create the database.'),"
 #endif
       << "('db_name', '" << db_name << "', " << "'Name of DB instance.');"
       << std::endl;

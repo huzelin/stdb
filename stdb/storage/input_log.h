@@ -104,7 +104,7 @@ struct LZ4Volume {
 
   enum {
     BLOCK_SIZE          = 0x2000,
-    FRAME_TUPLE_SIZE    = sizeof(u64)*3,
+    FRAME_TUPLE_SIZE    = sizeof(u64) * 3,
     NUM_TUPLES          = (BLOCK_SIZE - sizeof(FrameHeader)) / FRAME_TUPLE_SIZE,
   };
 

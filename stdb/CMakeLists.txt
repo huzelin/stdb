@@ -1,0 +1,7 @@
+add_subdirectory(common)
+#add_subdirectory(storage)
+#add_subdirectory(index)
+#add_subdirectory(query)
+#add_subdirectory(core)
+#add_subdirectory(server)
+#add_subdirectory(client)

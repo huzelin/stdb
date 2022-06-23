@@ -54,7 +54,7 @@ TEST(TestInputLog, Test_input_roundtrip) {
       u32 outsz;
       std::tie(status, outsz) = ilog.read_next(1024, buffer);
       EXPECT_EQ(status, common::Status::Ok());
-      for(u32 i = 0; i < outsz; i++) {
+      for (u32 i = 0; i < outsz; i++) {
         auto id = buffer[i].id;
         auto payload = boost::get<InputLogDataPoint>(buffer[i].payload);
         act.push_back(std::make_tuple(id, payload.timestamp, payload.value));
@@ -283,10 +283,10 @@ void test_input_roundtrip_with_conflicts(int ccr, int rowsize) {
     std::vector<InputLog*> ilogs;
     for (int i = 0; i < ccr; i++) {
       ilogs.push_back(&slog.get_shard(i));
-      ids.push_back((i + 1)*1111);
+      ids.push_back((i + 1) * 1111);
     }
     int oldshift = 0;
-    for (int i = 0; i < 10000*ccr; i++) {
+    for (int i = 0; i < 10000 * ccr; i++) {
       int shift = i / rowsize;
       if (shift != oldshift) {
         // Simulate disconnection
@@ -510,10 +510,10 @@ void test_input_roundtrip_with_conflicts_and_vartype(int ccr, int rowsize, int s
     std::vector<InputLog*> ilogs;
     for (int i = 0; i < ccr; i++) {
       ilogs.push_back(&slog.get_shard(i));
-      ids.push_back((i + 1)*1111);
+      ids.push_back((i + 1) * 1111);
     }
     int oldshift = 0;
-    for (int i = 0; i < 10000*ccr; i++) {
+    for (int i = 0; i < 10000 * ccr; i++) {
       int shift = i / rowsize;
       if (shift != oldshift) {
         // Simulate disconnection
