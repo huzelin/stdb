@@ -10,12 +10,14 @@ cc_library(
     "cursor.cc",
     "metadatastorage.cc",
     "storage.cc",
+    "storage_api.cc",
   ],
   hdrs = [
     "stdb.h",
     "cursor.h",
     "metadatastorage.h",
     "storage.h",
+    "storage_api.h",
   ],
   alwayslink = 1,
   copts = [
