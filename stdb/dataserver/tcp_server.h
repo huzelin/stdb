@@ -202,3 +202,5 @@ struct TcpServer : std::enable_shared_from_this<TcpServer>, Server {
 };
 
 }  // namespace stdb
+
+#endif  // STDB_DATASERVER_TCP_SERVER_H_

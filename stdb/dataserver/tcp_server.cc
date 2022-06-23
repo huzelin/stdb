@@ -9,7 +9,16 @@
 #include <boost/function.hpp>
 #include <boost/exception/diagnostic_information.hpp>
 
+#include "stdb/common/logging.h"
+
 namespace stdb {
+
+using protocol::Byte;
+using protocol::StreamError;
+using protocol::RESPError;
+using protocol::DatabaseError;
+using protocol::RESPProtocolParser;
+using protocol::OpenTSDBProtocolParser;
 
 std::string make_unique_session_name() {
   static std::atomic<int> counter = {0};
@@ -86,6 +95,7 @@ class TelnetSession : public ProtocolSession, public std::enable_shared_from_thi
     auto fn = [weak](common::Status status, u64) {
       auto session = weak.lock();
       if (session) {
+        auto msg = status.ToString();
         LOG(ERROR) << status.ToString();
         boost::asio::streambuf stream;
         std::ostream os(&stream);
@@ -131,7 +141,7 @@ class TelnetSession : public ProtocolSession, public std::enable_shared_from_thi
         start();
       } catch (StreamError const& stream_error) {
         // This error is related to client so we need to send it back
-        logger_.error() << stream_error.what();
+        LOG(ERROR) << stream_error.what();
         boost::asio::streambuf stream;
         std::ostream os(&stream);
         os << parser_.error_repr(ProtocolT::PARSE, stream_error.what());
@@ -142,7 +152,7 @@ class TelnetSession : public ProtocolSession, public std::enable_shared_from_thi
                                 );
       } catch (DatabaseError const& dberr) {
         // Database error
-        logger_.error() << boost::current_exception_diagnostic_information();
+        LOG(ERROR) << boost::current_exception_diagnostic_information();
         boost::asio::streambuf stream;
         std::ostream os(&stream);
         os << parser_.error_repr(ProtocolT::DB, dberr.what());
@@ -153,7 +163,7 @@ class TelnetSession : public ProtocolSession, public std::enable_shared_from_thi
                                 );
       } catch (...) {
         // Unexpected error
-        logger_.error() << boost::current_exception_diagnostic_information();
+        LOG(ERROR) << boost::current_exception_diagnostic_information();
         boost::asio::streambuf stream;
         std::ostream os(&stream);
         os << parser_.error_repr(ProtocolT::ERR, boost::current_exception_diagnostic_information());

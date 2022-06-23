@@ -46,7 +46,7 @@ struct ReadOperation {
   */
   virtual void append(const char* data, size_t data_size) = 0;
 
-  /** Return error code or AKU_SUCCESS.
+  /** Return error code or Ok.
    * This error code represent result of the query parsing and initial processing. It can indicate
    * error in the query. Result of the call to this function shouldn't change while reading data.
    * If error occurs during reading `read_some` method should throw an error.
@@ -60,7 +60,7 @@ struct ReadOperation {
   virtual const char* get_error_message() = 0;
 
   /** Read some data from cursor. This method should be called only if `get_error` have returned
-   * AKU_SUCCESS. If some error occured during read operation this method should throw.
+   * Ok. If some error occured during read operation this method should throw.
    * Method returns tuple (num_elements, is_done). If there is no more results, method returns
    * (any, true) otherwise it returns (any, false). Number of elements can be 0, in this case
    * if second tuple element is false client should call this method again.

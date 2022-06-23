@@ -14,5 +14,6 @@ cc_library(
   ],
   deps = [
     "@com_github_boost_container_hash//:container_hash",
+    "@com_github_boost_throw_exception//:throw_exception",
   ],
 )

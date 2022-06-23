@@ -46,6 +46,20 @@ def boost_deps():
   )
 
   new_git_repository(
+    name = "com_github_boost_align",
+    build_file = "@//thirdparty/boost:boost_align.BUILD",
+    tag = "boost-1.79.0",
+    remote = "https://github.com/boostorg/align.git",
+  )
+
+  new_git_repository(
+    name = "com_github_boost_program_options",
+    build_file = "@//thirdparty/boost:boost_program_options.BUILD",
+    tag = "boost-1.79.0",
+    remote = "https://github.com/boostorg/program_options.git",
+  )
+
+  new_git_repository(
     name = "com_github_boost_core",
     build_file = "@//thirdparty/boost:boost_core.BUILD",
     tag = "boost-1.79.0",
