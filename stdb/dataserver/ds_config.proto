@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package stdb.proto;
+
+option cc_enable_arenas = true;
+
+message WalConfig {
+  string input_log_path = 1; 
+  uint32 input_log_concurrency = 2;
+  uint32 input_log_volume_numb = 3;
+  uint64 input_log_volume_size = 4;
+}
+
+message DatabaseConfig {
+  string db_name = 1;
+  string base_file_name = 2;
+  string metadata_path = 3;
+  string volumes_path = 4;
+  uint32 num_volumes = 5;
+  uint32 volume_size = 6;
+  bool allocate = 7;
+  WalConfig wal_config = 8;
+}
+
+message ServiceConfig {
+  string name = 1;
+  uint32 port = 2;
+}
+
+message DsConfig {
+  repeated DatabaseConfig database_config = 1;
+  repeated ServiceConfig service_config = 2;
+}

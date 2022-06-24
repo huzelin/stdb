@@ -12,6 +12,7 @@ cc_library(
     "memorymappedfile.cc",
     "proto_configure.cc",
     "rwlock.cc",
+    "signal_handler.cc",
   ],
   hdrs = [
     "basic.h",
@@ -31,6 +32,7 @@ cc_library(
     "thread_local.h",
     "timer.h",
     "types.h",
+    "signal_handler.h",
   ],
   alwayslink = 1,
   copts = [

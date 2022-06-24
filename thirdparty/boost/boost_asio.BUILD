@@ -20,6 +20,7 @@ cc_library(
     "@com_github_boost_fusion//:fusion",
     "@com_github_boost_regex//:regex",
     "@com_github_boost_system//:system",
-    "@com_github_boost_throw_exception//:throw_exception"
+    "@com_github_boost_throw_exception//:throw_exception",
+    "@com_github_boost_align//:align",
   ]
 )

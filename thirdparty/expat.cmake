@@ -1,0 +1,9 @@
+include(ExternalProject)
+
+ExternalProject_Add(expat
+	GIT_REPOSITORY https://github.com/libexpat/libexpat.git
+	GIT_TAG R_2_4_8
+	CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${EXTERNAL_INSTALL_LOCATION} -DCMAKE_INSTALL_LIBDIR=${EXTERNAL_INSTALL_LOCATION}/lib64 -DEXPAT_SHARED_LIBS=false"
+	GIT_SHALLOW 1
+	)
+

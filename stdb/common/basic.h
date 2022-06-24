@@ -33,6 +33,7 @@ namespace stdb {
 #define STDB_MIN_TIMESTAMP 0ull
 #define STDB_MAX_TIMESTAMP (~0ull)
 #define STDB_LIMITS_MAX_EVENT_LEN 4096
+#define STDB_LIMITS_MAX_ROW_WIDTH 0x100
 
 inline bool same_value(double a, double b) {
   union Bits {
