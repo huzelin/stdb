@@ -175,7 +175,7 @@ bool RESPProtocolParser::parse_timestamp(RESPStream& stream, Sample& sample) {
         return false;
       }
       tsbuf[bytes_read] = '\0';
-      if (Utils::parse_timestamp(tsbuf, &sample).IsOk()) {
+      if (Utility::parse_timestamp(tsbuf, &sample).IsOk()) {
         break;
       }
       // Fail through on error
@@ -884,7 +884,7 @@ OpenTSDBResponse OpenTSDBProtocolParser::worker() {
               // This is an extension of the OpenTSDB telnet protocol. If value can't be
               // interpreted as a Unix timestamp or as a nanosecond timestamp,
               // should try to parse it as a ISO-timestamp (because why not?).
-              status = Utils::parse_timestamp(pbuf, &sample);
+              status = Utility::parse_timestamp(pbuf, &sample);
               if (status == common::Status::Ok()) {
                 err = false;
               }

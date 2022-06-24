@@ -124,9 +124,11 @@ class STDBConnection : public DbConnection {
 
 void initialize();
 
-struct Utils {
+struct Utility {
   // parse timestamp.
   static common::Status parse_timestamp(const char* iso_str, Sample* sample);
+  static common::Status debug_report_dump(const char* path2db, const char* outfile);
+  static common::Status debug_recovery_report_dump(const char* path2db, const char* outfile);
 };
 
 }  // namespace stdb

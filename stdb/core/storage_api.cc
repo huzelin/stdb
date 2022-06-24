@@ -172,13 +172,21 @@ void initialize() {
   }
 }
 
-common::Status Utils::parse_timestamp(const char* iso_str, Sample* sample) {
+common::Status Utility::parse_timestamp(const char* iso_str, Sample* sample) {
   try {
     sample->timestamp = DateTimeUtil::from_iso_string(iso_str);
   } catch (...) {
     return common::Status::BadArg();
   }
   return common::Status::Ok();
+}
+
+common::Status Utility::debug_report_dump(const char* path2db, const char* outfile) {
+  return Storage::generate_report(path2db, outfile);
+}
+
+common::Status Utility::debug_recovery_report_dump(const char* path2db, const char* outfile) {
+  return Storage::generate_recovery_report(path2db, outfile);
 }
 
 }  // namespace stdb

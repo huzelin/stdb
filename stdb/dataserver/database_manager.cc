@@ -142,6 +142,15 @@ void DatabaseManager::clear_connection() {
   conns_.clear();
 }
 
+std::string DatabaseManager::get_meta_path(const std::string& db_name) {
+  for (auto& database_config : ds_config_.database_config()) {
+    if (database_config.db_name() == db_name) {
+      return get_meta_path(database_config);
+    }
+  }
+  return std::string();
+}
+
 bool DatabaseManager::has_db(const char* db_name) {
   for (auto& database_config : ds_config_.database_config()) {
     if (database_config.db_name() == db_name) {
