@@ -142,6 +142,10 @@ common::Status STDBConnection::create_database_ex(
   return Storage::new_database(base_file_name, metadata_path, volumes_path, num_volumes, volume_size, allocate);
 }
 
+common::Status STDBConnection::delete_database(const char* file_name, const char* wal_path, bool force) {
+  return Storage::remove_storage(file_name, wal_path, force);
+}
+
 common::Status Utils::parse_timestamp(const char* iso_str, Sample* sample) {
   try {
     sample->timestamp = DateTimeUtil::from_iso_string(iso_str);

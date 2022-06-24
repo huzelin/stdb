@@ -119,6 +119,7 @@ class STDBConnection : public DbConnection {
   static common::Status create_database_ex(const char* base_file_name, const char* metadata_path,
                                            const char* volumes_path, i32 num_volumes,
                                            u64 volume_size, bool allocate);
+  static common::Status delete_database(const char* file_name, const char* wal_path, bool force);
 };
 
 struct Utils {
