@@ -122,6 +122,8 @@ class STDBConnection : public DbConnection {
   static common::Status delete_database(const char* file_name, const char* wal_path, bool force);
 };
 
+void initialize();
+
 struct Utils {
   // parse timestamp.
   static common::Status parse_timestamp(const char* iso_str, Sample* sample);

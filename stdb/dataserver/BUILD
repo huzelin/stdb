@@ -17,12 +17,12 @@ cc_library(
   name = "dataserver",
   srcs = [
     "tcp_server.cc",
-    "configer.cc",
+    "database_manager.cc",
   ],
   hdrs = [
     "tcp_server.h",
     "server.h",
-    "configer.h",
+    "database_manager.h",
   ],
   alwayslink = 1,
   copts = [
