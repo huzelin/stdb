@@ -92,9 +92,7 @@ static void rich_print(const char* msg) {
   }
 }
 
-std::vector<std::shared_ptr<stdb::Server>> servers;
-
-static void run_tcp_server(stdb::SignalHandler* signal_handler) {
+static std::shared_ptr<stdb::Server> run_tcp_server(stdb::SignalHandler* signal_handler, int id) {
   auto conn = stdb::DatabaseManager::Get()->get_connection("main");
   std::shared_ptr<stdb::ReadOperationBuilder> read_operation_builder;
   
@@ -113,12 +111,13 @@ static void run_tcp_server(stdb::SignalHandler* signal_handler) {
   
   LOG(INFO) << "start run tcp server";
   auto server = stdb::ServerFactory::instance().create(conn, read_operation_builder, settings);
-  server->start(signal_handler, servers.size());
-  servers.push_back(server);
+  server->start(signal_handler, id);
+  return server;
 }
 
-static void run_rpc_server(stdb::SignalHandler* signal_handler) {
-  // TODO: run rpc server
+static std::shared_ptr<stdb::Server> run_rpc_server(stdb::SignalHandler* signal_handler, int id) {
+  std::shared_ptr<stdb::Server> server;
+  return server;
 }
 
 static void delete_database(const po::variables_map& vm) {
@@ -217,9 +216,11 @@ int main(int argc, char** argv) {
   }
 
   stdb::SignalHandler signal_handler;
-  run_tcp_server(&signal_handler);
-  run_rpc_server(&signal_handler);
+  auto tcp_server = run_tcp_server(&signal_handler, 0);
+  auto rpc_server = run_rpc_server(&signal_handler, 1);
+  // TODO: Add http-server.
   signal_handler.wait();
+
   stdb::DatabaseManager::Get()->clear_connection();
 
   return 0;
