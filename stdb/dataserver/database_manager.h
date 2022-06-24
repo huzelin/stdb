@@ -1,22 +1,22 @@
 /*!
  * \file configer.h
  */
-#ifndef STDB_DATASERVER_CONFIGER_H_
-#define STDB_DATASERVER_CONFIGER_H_
+#ifndef STDB_DATASERVER_DATABASE_MANAGER_H_
+#define STDB_DATASERVER_DATABASE_MANAGER_H_
 
 #include <mutex>
 
 #include "stdb/common/singleton.h"
 #include "stdb/common/status.h"
 #include "stdb/common/basic.h"
-
+#include "stdb/core/storage_api.h"
 #include "stdb/dataserver/ds_config.pb.h"
 
 namespace stdb {
 
-class Configer : public common::Singleton<Configer> {
+class DatabaseManager : public common::Singleton<DatabaseManager> {
  public:
-  Configer();
+  DatabaseManager();
 
   void disable_wal(const std::string& db_name);
   void set_wal(const std::string& db_name, const std::string& wal_path);
@@ -30,14 +30,22 @@ class Configer : public common::Singleton<Configer> {
                                     bool allocate);
   common::Status delete_database(const char* db_name, bool force);
 
+  std::shared_ptr<DbConnection> get_connection(const std::string& db_name);
+  void clear_connection();
+
  protected:
+  common::Status init_connection(const proto::DatabaseConfig& databse_config);
+  void remove_connection(const char* db_name);
+
   bool has_db(const char* db_name);
   std::string get_meta_path(const proto::DatabaseConfig& database_config) const;
+  void save_ds_config();
 
+  std::map<std::string, std::shared_ptr<DbConnection>> conns_;
   proto::DsConfig ds_config_;
   std::mutex mutex_;
 };
 
 }  // namespace stdb
 
-#endif  // STDB_DATASERVER_CONFIGER_H_
+#endif  // STDB_DATASERVER_DATABASE_MANAGER_H_

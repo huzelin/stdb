@@ -13,6 +13,8 @@
 #include "stdb/core/cursor.h"
 #include "stdb/core/storage.h"
 
+#include <apr_dbd.h>
+
 namespace stdb {
 
 struct BaseCursor : public DbCursor {
@@ -144,6 +146,30 @@ common::Status STDBConnection::create_database_ex(
 
 common::Status STDBConnection::delete_database(const char* file_name, const char* wal_path, bool force) {
   return Storage::remove_storage(file_name, wal_path, force);
+}
+
+//! Pool for `apr_dbd_init`
+static apr_pool_t* g_dbd_pool = nullptr;
+
+void initialize() {
+  // initialize libapr
+  apr_initialize();
+  // initialize aprdbd
+  auto status = apr_pool_create(&g_dbd_pool, nullptr);
+  if (status != APR_SUCCESS) {
+    LOG(FATAL) << "Initialization error";
+  }
+  status = apr_dbd_init(g_dbd_pool);
+  if (status != APR_SUCCESS) {
+    LOG(FATAL) << "DBD initialization error";
+  }
+
+  const apr_dbd_driver_t* driver = NULL;
+  apr_dbd_t* handle = NULL;
+  auto rv = apr_dbd_get_driver(g_dbd_pool, "sqlite3", &driver);
+  if (rv != APR_SUCCESS) {
+    LOG(FATAL) << "apr dbd has no sqlite3 driver";
+  }
 }
 
 common::Status Utils::parse_timestamp(const char* iso_str, Sample* sample) {

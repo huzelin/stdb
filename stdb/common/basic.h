@@ -49,12 +49,12 @@ inline bool same_value(double a, double b) {
 
 namespace common {
 
-inline std::string GetMetaVolumeDir() {
+inline std::string GetHomeDir() {
   auto ptr = getenv("HOME");
   if (ptr) {
-    return std::string(ptr) + "/.stdb";
+    return std::string(ptr);
   } else {
-    return ".stdb";
+    return "/home/stdb/";
   }
 }
 

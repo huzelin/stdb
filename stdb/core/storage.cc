@@ -518,6 +518,10 @@ void Storage::initialize_input_log(const FineTuneParams &params) {
         std::to_string(params.input_log_volume_numb) + ", volume-size: " +
         std::to_string(params.input_log_volume_size);
 
+    if (!boost::filesystem::exists(params.input_log_path)) {
+      boost::filesystem::create_directories(params.input_log_path);
+    }
+
     inputlog_.reset(new storage::ShardedInputLog(static_cast<int>(params.input_log_concurrency),
                                         params.input_log_path,
                                         params.input_log_volume_numb,
@@ -1615,6 +1619,7 @@ common::Status Storage::remove_storage(const char* file_name, const char* wal_pa
   auto volumes = meta->get_volumes();
   if (volumes.empty()) {
     // Bad database
+    LOG(ERROR) << "volume is empty";
     return common::Status::BadArg();
   }
   std::vector<std::string> volume_names(volumes.size(), "");
