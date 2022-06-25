@@ -581,6 +581,7 @@ void RESPProtocolParser::worker() {
         // Fast path
         sample.paramid = paramids_[i];
         sample.payload.float64 = values_[i];
+        // LOG(INFO) << "value=" << values_[i];
         status = consumer_->write(sample);
         // Message processed and frame can be removed (if possible)
         if (status != common::Status::Ok()) {
