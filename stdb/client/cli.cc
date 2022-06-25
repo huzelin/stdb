@@ -80,12 +80,13 @@ static void writeBuf() {
       }
     }
   }
-  fsync(sockfd);
 }
 
 static void processCommand(const std::vector<std::tuple<const char*, uint32_t>>& args) {
-  preparePutBuf(args);
-  writeBuf();
+  if (args.size() == 3) {
+    preparePutBuf(args);
+    writeBuf();
+  }
 }
 
 static void repl(const std::string& prompt) {
