@@ -13,6 +13,7 @@ cc_library(
     "proto_configure.cc",
     "rwlock.cc",
     "signal_handler.cc",
+    "strutil.cc",
   ],
   hdrs = [
     "basic.h",
@@ -33,6 +34,7 @@ cc_library(
     "timer.h",
     "types.h",
     "signal_handler.h",
+    "strutil.h",
   ],
   alwayslink = 1,
   copts = [
@@ -102,6 +104,16 @@ cc_test(
 cc_test(
   name = "crc32c_test",
   srcs = ["crc32c_test.cc"],
+  deps = [
+    "@gtest//:gtest",
+    "@gtest//:gtest_main",
+    ":common",
+  ],
+)
+
+cc_test(
+  name = "strutil_test",
+  srcs = ["strutil_test.cc"],
   deps = [
     "@gtest//:gtest",
     "@gtest//:gtest_main",

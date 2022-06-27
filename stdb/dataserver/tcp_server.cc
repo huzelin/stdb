@@ -127,6 +127,7 @@ class TelnetSession : public ProtocolSession, public std::enable_shared_from_thi
       parser_.close();
     } else {
       try {
+        // LOG(INFO) << "curr thread =" << pthread_self();
         auto response = parser_.parse_next(buffer, static_cast<u32>(nbytes));
         if(response.is_available()) {
           boost::asio::streambuf stream;

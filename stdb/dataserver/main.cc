@@ -120,6 +120,22 @@ static std::shared_ptr<stdb::Server> run_rpc_server(stdb::SignalHandler* signal_
   return server;
 }
 
+static void run_debug_dump(const po::variables_map& vm) {
+  auto db_name = vm["debug-dump"].as<std::string>();
+  auto meta_path = stdb::DatabaseManager::Get()->get_meta_path(db_name);
+  stdb::Utility::debug_report_dump(meta_path.c_str(), nullptr);
+
+  stdb::DatabaseManager::Get()->clear_connection();
+}
+
+static void run_debug_recovery_dump(const po::variables_map& vm) {
+  auto db_name = vm["debug-recovery-dump"].as<std::string>();
+  auto meta_path = stdb::DatabaseManager::Get()->get_meta_path(db_name);
+  stdb::Utility::debug_recovery_report_dump(meta_path.c_str(), nullptr);
+
+  stdb::DatabaseManager::Get()->clear_connection();
+} 
+
 static void delete_database(const po::variables_map& vm) {
   bool force = false;
   if (vm.count("force")) {
@@ -205,6 +221,16 @@ int main(int argc, char** argv) {
   }
 
   stdb::initialize();
+
+  if (vm.count("debug-dump")) {
+    run_debug_dump(vm);
+    exit(EXIT_SUCCESS);
+  }
+  if (vm.count("debug-recovery-dump")) {
+    run_debug_recovery_dump(vm);
+    exit(EXIT_SUCCESS);
+  }
+
   if (vm.count("delete")) {
     delete_database(vm);
     exit(EXIT_SUCCESS);

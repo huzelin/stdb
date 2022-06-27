@@ -33,6 +33,8 @@ class DatabaseManager : public common::Singleton<DatabaseManager> {
   std::shared_ptr<DbConnection> get_connection(const std::string& db_name);
   void clear_connection();
 
+  std::string get_meta_path(const std::string& db_name);
+
  protected:
   common::Status init_connection(const proto::DatabaseConfig& databse_config);
   void remove_connection(const char* db_name);
