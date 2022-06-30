@@ -49,18 +49,16 @@ std::tuple<common::Status, size_t> JoinMaterializer::read(u8 *dest, size_t size)
   size_t pos = 0;
   while (pos < (size - max_ssize_)) {
     Sample* sample;
-    double*     values;
+    double* values;
     std::tie(sample, values) = cast(dest + pos);
 
     union {
       double d;
       u64    u;
     } ctrl;
-
     ctrl.u = 0;
 
     u32 tuple_pos = 0;
-
     for (u32 i = 0; i < orig_ids_.size(); i++) {
       if (buffer_size_ - buffer_pos_ < sizeof(Sample)) {
         auto status = fill_buffer();
@@ -68,7 +66,7 @@ std::tuple<common::Status, size_t> JoinMaterializer::read(u8 *dest, size_t size)
           return std::make_tuple(status, 0);
         }
         if (buffer_size_ == 0) {
-          return std::make_tuple(common::Status::NoData(""), pos);
+          return std::make_tuple(common::Status::NoData(), pos);
         }
       }
 

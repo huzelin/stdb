@@ -67,9 +67,9 @@ struct JoinConcatMaterializer : ColumnMaterializer {
    * @return status and output size (in bytes)
    */
   std::tuple<common::Status, size_t> read(u8 *dest, size_t size) {
-    while(true) {
+    while (true) {
       if (ix_ >= iters_.size()) {
-        return std::make_tuple(common::Status::NoData(""), 0);
+        return std::make_tuple(common::Status::NoData(), 0);
       }
       common::Status status;
       size_t outsz;
@@ -77,7 +77,7 @@ struct JoinConcatMaterializer : ColumnMaterializer {
       if (status.Code() == common::Status::kNoData) {
         ix_++;
         if (outsz != 0) {
-          return std::make_tuple(ix_ != iters_.size() ? common::Status::Ok() : common::Status::NoData(""), outsz);
+          return std::make_tuple(ix_ != iters_.size() ? common::Status::Ok() : common::Status::NoData(), outsz);
         }
       } else {
         return std::make_tuple(status, outsz);

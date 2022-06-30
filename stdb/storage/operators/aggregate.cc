@@ -15,20 +15,20 @@ void CombineAggregateOperator::add(std::unique_ptr<AggregateOperator>&& it) {
 
 std::tuple<common::Status, size_t> CombineAggregateOperator::read(Timestamp *destts, AggregationResult *destval, size_t size) {
   if (size == 0) {
-    return std::make_tuple(common::Status::BadArg(""), 0);
+    return std::make_tuple(common::Status::BadArg(), 0);
   }
   if (iter_index_ == iter_.size()) {
-    return std::make_tuple(common::Status::NoData(""), 0);
+    return std::make_tuple(common::Status::NoData(), 0);
   }
   const size_t SZBUF = 1024;
-  common::Status status = common::Status::NoData("");
+  common::Status status = common::Status::NoData();
   AggregationResult xsresult = INIT_AGGRES;
   Timestamp tsresult = 0;
   std::vector<AggregationResult> outval(SZBUF, INIT_AGGRES);
   std::vector<Timestamp> outts(SZBUF, 0);
   ssize_t ressz;
   int nagg = 0;
-  while(iter_index_ < iter_.size()) {
+  while (iter_index_ < iter_.size()) {
     std::tie(status, ressz) = iter_[iter_index_]->read(outts.data(), outval.data(), SZBUF);
     if (ressz != 0) {
       xsresult = std::accumulate(outval.begin(), outval.begin() + ressz, xsresult,
@@ -36,7 +36,7 @@ std::tuple<common::Status, size_t> CombineAggregateOperator::read(Timestamp *des
                                    lhs.combine(rhs);
                                    return lhs;
                                  });
-      tsresult = outts[static_cast<size_t>(ressz)-1];
+      tsresult = outts[static_cast<size_t>(ressz) - 1];
       nagg++;
     }
     if (status.Code() == common::Status::kNoData) {
@@ -69,13 +69,13 @@ void FanInAggregateOperator::add(std::unique_ptr<AggregateOperator>&& it) {
 std::tuple<common::Status, size_t> FanInAggregateOperator::read(Timestamp *destts, AggregationResult *destval, size_t size) {
   static const Timestamp MAX_TS = std::numeric_limits<Timestamp>::max();
   if (size == 0) {
-    return std::make_tuple(common::Status::BadArg(""), 0);
+    return std::make_tuple(common::Status::BadArg(), 0);
   }
   if (iter_index_ == iter_.size()) {
-    return std::make_tuple(common::Status::NoData(""), 0);
+    return std::make_tuple(common::Status::NoData(), 0);
   }
   const size_t SZBUF = iter_.size();
-  common::Status status = common::Status::NoData("");
+  common::Status status = common::Status::NoData();
   std::vector<AggregationResult> outval(SZBUF, INIT_AGGRES);
   std::vector<Timestamp> outts(SZBUF, MAX_TS);
   ssize_t ressz;
@@ -98,7 +98,7 @@ std::tuple<common::Status, size_t> FanInAggregateOperator::read(Timestamp *destt
           return std::make_pair(status, 0);
         }
         if (nz == outval.size()) {
-          return std::make_pair(common::Status::NoData(""), ixout);
+          return std::make_pair(common::Status::NoData(), ixout);
         }
       }
       ix++;
@@ -108,7 +108,7 @@ std::tuple<common::Status, size_t> FanInAggregateOperator::read(Timestamp *destt
                               return std::min(lhs, rhs);
                             });
     if (tsmin == MAX_TS) {
-      return std::make_pair(common::Status::NoData(""), ixout);
+      return std::make_pair(common::Status::NoData(), ixout);
     }
     AggregationResult xsresult = INIT_AGGRES;
     for (u32 i = 0; i < iter_.size(); i++) {
@@ -173,11 +173,10 @@ std::tuple<common::Status, size_t> CombineGroupAggregateOperator::copy_to(Timest
   return std::make_tuple(status, copied);
 }
 
-
 common::Status CombineGroupAggregateOperator::refill_read_buffer() {
-  common::Status status = common::Status::NoData("");
+  common::Status status = common::Status::NoData();
   if (iter_index_ == iter_.size()) {
-    return common::Status::NoData("");
+    return common::Status::NoData();
   }
 
   u32 pos = 0;
@@ -197,7 +196,7 @@ common::Status CombineGroupAggregateOperator::refill_read_buffer() {
     rdpos_ = 0;
   }
 
-  while(iter_index_ < iter_.size()) {
+  while (iter_index_ < iter_.size()) {
     size_t size = rdbuf_.size() - pos;
     if (size == 0) {
       break;
@@ -254,7 +253,7 @@ common::Status CombineGroupAggregateOperator::refill_read_buffer() {
 
 std::tuple<common::Status, size_t> CombineGroupAggregateOperator::read(Timestamp *destts, AggregationResult *destval, size_t size) {
   if (size == 0) {
-    return std::make_tuple(common::Status::BadArg(""), 0);
+    return std::make_tuple(common::Status::BadArg(), 0);
   }
   return copy_to(destts, destval, size);
 }
@@ -273,9 +272,9 @@ AggregateMaterializer::AggregateMaterializer(
     , func_(std::move(func)) { }
 
 std::tuple<common::Status, size_t> AggregateMaterializer::read(u8* dest, size_t size) {
-  common::Status status = common::Status::NoData("");
+  common::Status status = common::Status::NoData();
   size_t nelements = 0;
-  while(pos_ < iters_.size()) {
+  while (pos_ < iters_.size()) {
     Timestamp destts = 0;
     AggregationResult destval;
     size_t outsz = 0;
@@ -322,7 +321,7 @@ std::tuple<common::Status, size_t> AggregateMaterializer::read(u8* dest, size_t 
         break;
       case AggregationFunction::MEAN:
         sample.timestamp = destval._end;
-        sample.payload.float64 = destval.sum/destval.cnt;
+        sample.payload.float64 = destval.sum / destval.cnt;
         break;
       case AggregationFunction::LAST:
         sample.timestamp = destval._end;
@@ -364,7 +363,7 @@ std::tuple<common::Status, size_t> AggregateMaterializer::read(u8* dest, size_t 
 
 
 std::tuple<common::Status, size_t> SeriesOrderAggregateMaterializer::read(u8 *dest, size_t dest_size) {
-  common::Status status = common::Status::NoData("");
+  common::Status status = common::Status::NoData();
   size_t ressz = 0;  // current size
   size_t accsz = 0;  // accumulated size
   size_t sample_size = get_tuple_size(tuple_);
@@ -374,7 +373,7 @@ std::tuple<common::Status, size_t> SeriesOrderAggregateMaterializer::read(u8 *de
   std::vector<ParamId> outids(size, 0);
   Timestamp* destts = destts_vec.data();
   AggregationResult* destval = destval_vec.data();
-  while(pos_ < iters_.size()) {
+  while (pos_ < iters_.size()) {
     ParamId curr = ids_[pos_];
     std::tie(status, ressz) = iters_[pos_]->read(destts, destval, size);
     for (size_t i = accsz; i < accsz+ressz; i++) {
