@@ -128,9 +128,9 @@ int ValueFilter::get_rank() const {
 
 bool ValueFilter::is_ordered() const {
   if (get_rank() == 2) {
-    double hi = mask&(1 << LT) ? thresholds[LT]
+    double hi = mask & (1 << LT) ? thresholds[LT]
         : thresholds[LE];
-    double lo = mask&(1 << GT) ? thresholds[GT]
+    double lo = mask & (1 << GT) ? thresholds[GT]
         : thresholds[GE];
     return lo < hi;
   }
@@ -143,23 +143,22 @@ RangeOverlap ValueFilter::get_overlap(const SubtreeRef& ref) const {
     bool end   = match(ref.max);
     if (begin && end) {
       return RangeOverlap::FULL_OVERLAP;
-    }
-    else if (begin || end) {
+    } else if (begin || end) {
       return RangeOverlap::PARTIAL_OVERLAP;
     } else {
       return RangeOverlap::NO_OVERLAP;
     }
   } else {
     // Rank is two, use range overlap algorithm
-    double hi = mask&(1 << LT) ? thresholds[LT]
+    double hi = mask & (1 << LT) ? thresholds[LT]
         : thresholds[LE];
-    double lo = mask&(1 << GT) ? thresholds[GT]
+    double lo = mask & (1 << GT) ? thresholds[GT]
         : thresholds[GE];
     double min = std::min(ref.min, lo);
     double max = std::max(ref.max, hi);
     double w1  = ref.max - ref.min;
     double w2  = hi - lo;
-    bool inclusive = (mask&(1 << LE)) && (mask&(1 << GE));
+    bool inclusive = (mask & (1 << LE)) && (mask & (1 << GE));
     bool overlap = inclusive ? max - min <= w1 + w2
         : max - min <  w1 + w2;
     if (overlap) {
@@ -258,17 +257,13 @@ bool AggregateFilter::match(const AggregationResult& res) const {
       double value = 0.;
       if (bit == AVG) {
         value = res.sum / res.cnt;
-      }
-      else if (bit == MIN) {
+      } else if (bit == MIN) {
         value = res.min;
-      }
-      else if (bit == MAX) {
+      } else if (bit == MAX) {
         value = res.max;
-      }
-      else if (bit == FIRST) {
+      } else if (bit == FIRST) {
         value = res.first;
-      }
-      else if (bit == LAST) {
+      } else if (bit == LAST) {
         value = res.last;
       }
       if (mode == Mode::ALL) {
