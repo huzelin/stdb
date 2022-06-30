@@ -7,6 +7,7 @@ cc_library(
   srcs = [
     "crc32c.cc",
     "datetime.cc",
+    "exception.cc",
     "hash.cc",
     "mmapfile.cc",
     "memorymappedfile.cc",
@@ -21,6 +22,7 @@ cc_library(
     "config.h",
     "crc32c.h",
     "datetime.h",
+    "exception.h",
     "file_utils.h",
     "hash.h",
     "logging.h",

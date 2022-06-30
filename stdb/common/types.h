@@ -17,6 +17,7 @@ typedef int8_t   i8;
 
 typedef u64 Timestamp;  //< Timestamp
 typedef u64 ParamId;    //< Parameter (or sequence) id
+typedef float SpatialType; //< Spatial type, such as lon, lat
 
 //! Payload data
 typedef struct {
@@ -63,6 +64,8 @@ typedef struct {
 //! Cursor result type
 typedef struct {
   Timestamp timestamp;
+  SpatialType lon;
+  SpatialType lat;
   ParamId   paramid;
   PData     payload;
 } Sample;

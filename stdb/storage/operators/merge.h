@@ -11,6 +11,7 @@
 #include <boost/range/iterator_range.hpp>
 
 #include "stdb/common/basic.h"
+#include "stdb/common/exception.h"
 #include "stdb/common/logging.h"
 
 namespace stdb {
@@ -80,6 +81,44 @@ using SeriesOrder = SeriesOrderImpl<dir, double>;
 template<int dir>
 using EventSeriesOrder = SeriesOrderImpl<dir, std::string>;
 
+namespace internal {
+// The range
+template <typename VType, int RANGE_SIZE>
+struct Range {
+  std::vector<Timestamp> ts;
+  std::vector<VType> xs;
+  ParamId id;
+  size_t size;
+  size_t pos;
+
+  Range(ParamId id) : id(id), size(0), pos(0) {
+    ts.resize(RANGE_SIZE);
+    xs.resize(RANGE_SIZE);
+  }
+
+  void advance() {
+    pos++;
+  }
+
+  void retreat() {
+    assert(pos);
+    pos--;
+  }
+
+  bool empty() const {
+    return !(pos < size);
+  }
+
+  std::tuple<Timestamp, ParamId> top_key() const {
+    return std::make_tuple(ts.at(pos), id);
+  }
+
+  const VType& top_value() const {
+    return xs.at(pos);
+  }
+};
+}  // namespace internal
+
 template <template <int dir> class CmpPred, bool IsStable = false>
 struct MergeMaterializer : ColumnMaterializer {
   std::vector<std::unique_ptr<RealValuedOperator>> iters_;
@@ -90,55 +129,16 @@ struct MergeMaterializer : ColumnMaterializer {
     RANGE_SIZE = 1024
   };
 
-  struct Range {
-    std::vector<Timestamp> ts;
-    std::vector<double> xs;
-    ParamId id;
-    size_t size;
-    size_t pos;
-
-    Range(ParamId id)
-        : id(id)
-          , size(0)
-          , pos(0) {
-      ts.resize(RANGE_SIZE);
-      xs.resize(RANGE_SIZE);
-    }
-
-    void advance() {
-      pos++;
-    }
-
-    void retreat() {
-      assert(pos);
-      pos--;
-    }
-
-    bool empty() const {
-      return !(pos < size);
-    }
-
-    std::tuple<Timestamp, ParamId> top_key() const {
-      return std::make_tuple(ts.at(pos), id);
-    }
-
-    double top_value() const {
-      return xs.at(pos);
-    }
-  };
-
+  typedef internal::Range<double, RANGE_SIZE> Range;
   std::vector<Range> ranges_;
 
   MergeMaterializer(std::vector<ParamId>&& ids, std::vector<std::unique_ptr<RealValuedOperator>>&& it)
-      : iters_(std::move(it))
-        , ids_(std::move(ids))
-        , forward_(true) {
+      : iters_(std::move(it)), ids_(std::move(ids)), forward_(true) {
     if (!iters_.empty()) {
       forward_ = iters_.front()->get_direction() == RealValuedOperator::Direction::FORWARD;
     }
     if (iters_.size() != ids_.size()) {
-      // TODO: fix it.
-      LOG(FATAL) << "MergeIterator - broken invariant";
+      STDB_THROW("iters_.size()=", iters_.size(), " ids_.size()=", ids_.size());
     }
   }
 
@@ -192,6 +192,7 @@ struct MergeMaterializer : ColumnMaterializer {
       KEY = 0,
       VALUE = 1,
       INDEX = 2,
+
       TIME = 0,
       ID = 1,
     };
@@ -249,44 +250,7 @@ struct MergeEventMaterializer : ColumnMaterializer {
   enum {
     RANGE_SIZE = 1024
   };
-
-  struct Range {
-    std::vector<Timestamp> ts;
-    std::vector<std::string> xs;
-    ParamId id;
-    size_t size;
-    size_t pos;
-
-    Range(ParamId id)
-        : id(id)
-          , size(0)
-          , pos(0) {
-      ts.resize(RANGE_SIZE);
-      xs.resize(RANGE_SIZE);
-    }
-
-    void advance() {
-      pos++;
-    }
-
-    void retreat() {
-      assert(pos);
-      pos--;
-    }
-
-    bool empty() const {
-      return !(pos < size);
-    }
-
-    std::tuple<Timestamp, ParamId> top_key() const {
-      return std::make_tuple(ts.at(pos), id);
-    }
-
-    std::string top_value() const {
-      return xs.at(pos);
-    }
-  };
-
+  typedef internal::Range<std::string, RANGE_SIZE> Range;
   std::vector<Range> ranges_;
 
   MergeEventMaterializer(std::vector<ParamId>&& ids, std::vector<std::unique_ptr<BinaryDataOperator>>&& it)
@@ -297,8 +261,7 @@ struct MergeEventMaterializer : ColumnMaterializer {
       forward_ = iters_.front()->get_direction() == BinaryDataOperator::Direction::FORWARD;
     }
     if (iters_.size() != ids_.size()) {
-      // TODO: fix it
-      LOG(FATAL) << "MergeIterator - broken invariant";
+      STDB_THROW("iters_.size()=", iters_.size(), " ids_.size()=", ids_.size());
     }
   }
 
@@ -352,6 +315,7 @@ struct MergeEventMaterializer : ColumnMaterializer {
       KEY = 0,
       VALUE = 1,
       INDEX = 2,
+
       TIME = 0,
       ID = 1,
     };
@@ -362,7 +326,6 @@ struct MergeEventMaterializer : ColumnMaterializer {
       u32 index = std::get<INDEX>(item);
 
       // Produce sample
-
       std::string const& evt = std::get<VALUE>(item);
       // Check size
       u16 size_required = sizeof(Sample) + evt.size();
