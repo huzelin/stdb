@@ -43,7 +43,10 @@ typedef int8_t   i8;
 
 typedef u64 Timestamp;  //< Timestamp
 typedef u64 ParamId;    //< Parameter (or sequence) id
-typedef float SpatialType; //< Spatial type, such as lon, lat
+typedef struct {
+  float lon;
+  float lat;
+} Location;
 
 //! Payload data
 typedef struct {
@@ -63,7 +66,7 @@ typedef struct {
     REGULLAR         = 1 << 8,  /** indicates that the sample is a part of regullar time-series */
     PARAMID_BIT      = 1,       /** indicates that the param id is set */
     TIMESTAMP_BIT    = 1 << 1,  /** indicates that the timestamp is set */
-    SPATIAL_BIT      = 1 << 2,  /** indicates that the spatial is set */
+    LOCATION_BIT      = 1 << 2,  /** indicates that the location is set */
     CUSTOM_TIMESTAMP = 1 << 3,  /** indicates that timestamp shouldn't be formatted during output */
     FLOAT_BIT        = 1 << 4,  /** scalar type */
     TUPLE_BIT        = 1 << 5,  /** tuple type */
@@ -80,17 +83,16 @@ typedef struct {
   char data[0];
 } PData;
 
-#define PAYLOAD_FLOAT         (PData::PARAMID_BIT | PData::TIMESTAMP_BIT | PData::FLOAT_BIT)
-#define PAYLOAD_SPATIAL_FLOAT (PData::PARAMID_BIT | PData::TIMESTAMP_BIT | PData::FLOAT_BIT | PData::SPATIAL_BIT)
-#define PAYLOAD_TUPLE         (PData::PARAMID_BIT | PData::TIMESTAMP_BIT | PData::TUPLE_BIT)
-#define PAYLOAD_EVENT         (PData::PARAMID_BIT | PData::TIMESTAMP_BIT | PData::EVENT_BIT)
-#define PAYLOAD_NONE          (PData::PARAMID_BIT | PData::TIMESTAMP_BIT)
+#define PAYLOAD_FLOAT          (PData::PARAMID_BIT | PData::TIMESTAMP_BIT | PData::FLOAT_BIT)
+#define PAYLOAD_LOCATION_FLOAT (PData::PARAMID_BIT | PData::TIMESTAMP_BIT | PData::FLOAT_BIT | PData::LOCATION_BIT)
+#define PAYLOAD_TUPLE          (PData::PARAMID_BIT | PData::TIMESTAMP_BIT | PData::TUPLE_BIT)
+#define PAYLOAD_EVENT          (PData::PARAMID_BIT | PData::TIMESTAMP_BIT | PData::EVENT_BIT)
+#define PAYLOAD_NONE           (PData::PARAMID_BIT | PData::TIMESTAMP_BIT)
 
 //! Cursor result type
 typedef struct {
   Timestamp timestamp;
-  SpatialType lon;
-  SpatialType lat;
+  Location location;
   ParamId   paramid;
   PData     payload;
 } Sample;

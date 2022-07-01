@@ -1167,7 +1167,7 @@ void Storage::start_sync_worker() {
       global_matcher_.pull_new_names(names);
     };
 
-    while(done_.load() == 0) {
+    while (done_.load() == 0) {
       auto status = metadata_->wait_for_sync_request(SYNC_REQUEST_TIMEOUT);
       if (status == common::Status::Ok()) {
         bstore_->flush();

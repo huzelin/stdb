@@ -36,6 +36,16 @@ SeriesMatcher::SeriesMatcher(i64 starting_id)
 
 i64 SeriesMatcher::add(const char* begin, const char* end) {
   std::lock_guard<std::mutex> guard(mutex);
+  return add_impl(begin, end);
+}
+
+i64 SeriesMatcher::add(const char* begin, const char* end, const Location& location) {
+  std::lock_guard<std::mutex> guard(mutex);
+  locations.push_back(location);
+  return add_impl(begin, end);
+}
+
+i64 SeriesMatcher::add_impl(const char* begin, const char* end) {
   auto prev_id = series_id++;
   auto id = prev_id;
   if (*begin == '!') {
@@ -191,10 +201,20 @@ PlainSeriesMatcher::PlainSeriesMatcher(i64 starting_id)
 }
 
 i64 PlainSeriesMatcher::add(const char* begin, const char* end) {
+  std::lock_guard<std::mutex> guard(mutex);
+  return add_impl(begin, end);
+}
+
+i64 PlainSeriesMatcher::add(const char* begin, const char* end, const Location& location) {
+  std::lock_guard<std::mutex> guard(mutex);
+  locations.push_back(location);
+  return add_impl(begin, end);
+}
+
+i64 PlainSeriesMatcher::add_impl(const char* begin, const char* end) {
   auto id = series_id++;
   StringT pstr = pool.add(begin, end);
   auto tup = std::make_tuple(std::get<0>(pstr), std::get<1>(pstr), id);
-  std::lock_guard<std::mutex> guard(mutex);
   table[pstr] = id;
   inv_table[id] = pstr;
   names.push_back(tup);
