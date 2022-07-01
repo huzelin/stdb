@@ -136,7 +136,7 @@ struct MetadataStorage : storage::VolumeRegistry {
 
   common::Status wait_for_sync_request(int timeout_us);
 
-  void sync_with_metadata_storage(std::function<void(std::vector<SeriesT>*)> pull_new_names);
+  void sync_with_metadata_storage(std::function<void(std::vector<SeriesT>*, std::vector<Location>*)> pull_new_names);
 
   //! Forces `wait_for_sync_request` to return immediately
   void force_sync();
@@ -149,7 +149,7 @@ struct MetadataStorage : storage::VolumeRegistry {
 
   /** Add new series to the metadata storage (generate sql query and execute it).
   */
-  void insert_new_names(std::vector<SeriesT>&& items);
+  void insert_new_names(std::vector<SeriesT>&& items, std::vector<Location>&& locations);
 
   /** Insert or update rescue provided points (generate sql query and execute it).
   */

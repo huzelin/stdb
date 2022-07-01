@@ -81,7 +81,7 @@ MetadataStorage::MetadataStorage(const char* db)
   create_tables();
 
   // Create prepared statement
-  const char* query = "INSERT INTO stdb_series (series_id, keyslist, storage_id) VALUES (%s, %s, %d)";
+  const char* query = "INSERT INTO stdb_series (series_id, keyslist, storage_id, lon, lat) VALUES (%s, %s, %d, %f, %f)";
   status = apr_dbd_prepare(driver_, pool_.get(), handle_.get(), query, "INSERT_SERIES_NAME", &insert_);
   if (status != 0) {
     LOG(ERROR) << "Error creating prepared statement";
@@ -89,9 +89,11 @@ MetadataStorage::MetadataStorage(const char* db)
   }
 }
 
-void MetadataStorage::sync_with_metadata_storage(std::function<void(std::vector<SeriesT>*)> pull_new_names) {
+void MetadataStorage::sync_with_metadata_storage(
+    std::function<void(std::vector<SeriesT>*, std::vector<Location>*)> pull_new_names) {
   // Make temporary copies under the lock
   std::vector<PlainSeriesMatcher::SeriesNameT>           newnames;
+  std::vector<Location>                 locations;
   std::unordered_map<ParamId, std::vector<u64>> rescue_points;
   std::unordered_map<u32, VolumeDesc>               volume_records;
   {
@@ -99,7 +101,7 @@ void MetadataStorage::sync_with_metadata_storage(std::function<void(std::vector<
     std::swap(rescue_points, pending_rescue_points_);
     std::swap(volume_records, pending_volumes_);
   }
-  pull_new_names(&newnames);
+  pull_new_names(&newnames, &locations);
 
   // This lock is needed to prevent race condition during log replay.
   // When log replay completes, recovery procedure have to start synchronization
@@ -118,7 +120,7 @@ void MetadataStorage::sync_with_metadata_storage(std::function<void(std::vector<
 
   // Save new names
   begin_transaction();
-  insert_new_names(std::move(newnames));
+  insert_new_names(std::move(newnames), std::move(locations));
 
   // Save rescue points
   upsert_rescue_points(std::move(rescue_points));
@@ -174,7 +176,9 @@ void MetadataStorage::create_tables() {
       "id INTEGER PRIMARY KEY UNIQUE,"
       "series_id TEXT,"
       "keyslist TEXT,"
-      "storage_id INTEGER UNIQUE"
+      "storage_id INTEGER UNIQUE,"
+      "lon REAL,"
+      "lat REAL"
       ");";
   execute_query(query);
 
@@ -474,7 +478,7 @@ void MetadataStorage::upsert_rescue_points(std::unordered_map<ParamId, std::vect
   execute_query(query.str());
 }
 
-void MetadataStorage::insert_new_names(std::vector<SeriesT> &&items) {
+void MetadataStorage::insert_new_names(std::vector<SeriesT> &&items, std::vector<Location>&& locations) {
   if (items.size() == 0) {
     return;
   }
@@ -485,23 +489,35 @@ void MetadataStorage::insert_new_names(std::vector<SeriesT> &&items) {
     const size_t newsize = items.size() > batchsize ? items.size() - batchsize : 0;
     std::vector<MetadataStorage::SeriesT> batch(items.begin() + static_cast<ssize_t>(newsize), items.end());
     items.resize(newsize);
-    query << "INSERT INTO stdb_series (series_id, keyslist, storage_id)" << std::endl;
+
+    const size_t location_newsize = locations.size() > batchsize ? locations.size() - batchsize : 0;
+    std::vector<Location> batch_location(locations.begin() + static_cast<ssize_t>(location_newsize), locations.end());
+    locations.resize(location_newsize);
+
+    query << "INSERT INTO stdb_series (series_id, keyslist, storage_id, lon, lat)" << std::endl;
     bool first = true;
-    for (auto item: batch) {
+    for (size_t i = 0; i < batch.size(); ++i) {
+      auto& item = batch[i];
       LightweightString name, keys;
+      auto lon = i < batch_location.size() ? batch_location[i].lon : 0.0;
+      auto lat = i < batch_location.size() ? batch_location[i].lat : 0.0;
       auto stid = std::get<2>(item);
       if (split_series(std::get<0>(item), std::get<1>(item), &name, &keys)) {
         if (first) {
           query << "\tSELECT '" << name << "' as series_id, '"
               << keys << "' as keyslist, "
-              << stid << "  as storage_id"
+              << stid << "  as storage_id, "
+              << lon << " as lon, "
+              << lat << " as lat"
               << std::endl;
           first = false;
         } else {
           query << "\tUNION "
               <<   "SELECT '" << name << "', '"
               << keys << "', "
-              << stid
+              << stid << ", "
+              << lon << ", "
+              << lat
               << std::endl;
         }
       }

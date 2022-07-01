@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <regex>
 
+#include "stdb/common/exception.h"
 #include "stdb/common/logging.h"
 
 namespace stdb {
@@ -36,6 +37,16 @@ SeriesMatcher::SeriesMatcher(i64 starting_id)
 
 i64 SeriesMatcher::add(const char* begin, const char* end) {
   std::lock_guard<std::mutex> guard(mutex);
+  return add_impl(begin, end);
+}
+
+i64 SeriesMatcher::add(const char* begin, const char* end, const Location& location) {
+  std::lock_guard<std::mutex> guard(mutex);
+  locations.push_back(location);
+  return add_impl(begin, end);
+}
+
+i64 SeriesMatcher::add_impl(const char* begin, const char* end) {
   auto prev_id = series_id++;
   auto id = prev_id;
   if (*begin == '!') {
@@ -98,6 +109,12 @@ void SeriesMatcher::pull_new_names(std::vector<PlainSeriesMatcher::SeriesNameT> 
   std::swap(names, *buffer);
 }
 
+void SeriesMatcher::pull_new_names(std::vector<SeriesNameT>* name_buffer, std::vector<Location>* location_buffer) {
+  std::lock_guard<std::mutex> guard(mutex);
+  std::swap(names, *name_buffer);
+  std::swap(locations, *location_buffer);
+}
+
 std::vector<i64> SeriesMatcher::get_all_ids() const {
   std::vector<i64> result;
   {
@@ -118,7 +135,8 @@ std::vector<SeriesMatcher::SeriesNameT> SeriesMatcher::search(IndexQueryNodeBase
     auto str = *it;
     auto fit = table.find(str);
     if (fit == table.end()) {
-      LOG(FATAL) << "Invalid index state";
+      // LOG(FATAL) << "Invalid index state";
+      STDB_THROW("Invalid index state");
     }
     result.push_back(std::make_tuple(str.first, str.second, fit->second));
   }
@@ -191,10 +209,20 @@ PlainSeriesMatcher::PlainSeriesMatcher(i64 starting_id)
 }
 
 i64 PlainSeriesMatcher::add(const char* begin, const char* end) {
+  std::lock_guard<std::mutex> guard(mutex);
+  return add_impl(begin, end);
+}
+
+i64 PlainSeriesMatcher::add(const char* begin, const char* end, const Location& location) {
+  std::lock_guard<std::mutex> guard(mutex);
+  locations.push_back(location);
+  return add_impl(begin, end);
+}
+
+i64 PlainSeriesMatcher::add_impl(const char* begin, const char* end) {
   auto id = series_id++;
   StringT pstr = pool.add(begin, end);
   auto tup = std::make_tuple(std::get<0>(pstr), std::get<1>(pstr), id);
-  std::lock_guard<std::mutex> guard(mutex);
   table[pstr] = id;
   inv_table[id] = pstr;
   names.push_back(tup);
@@ -244,6 +272,12 @@ StringT PlainSeriesMatcher::id2str(i64 tokenid) const {
 void PlainSeriesMatcher::pull_new_names(std::vector<PlainSeriesMatcher::SeriesNameT> *buffer) {
   std::lock_guard<std::mutex> guard(mutex);
   std::swap(names, *buffer);
+}
+
+void PlainSeriesMatcher::pull_new_names(std::vector<SeriesNameT>* name_buffer, std::vector<Location>* location_buffer) {
+  std::lock_guard<std::mutex> guard(mutex);
+  std::swap(names, *name_buffer);
+  std::swap(locations, *location_buffer);
 }
 
 std::vector<i64> PlainSeriesMatcher::get_all_ids() const {

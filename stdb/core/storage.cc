@@ -1162,12 +1162,13 @@ void Storage::start_sync_worker() {
     SYNC_REQUEST_TIMEOUT = 10000,
   };
   auto sync_worker = [this]() {
-    auto get_names = [this](std::vector<PlainSeriesMatcher::SeriesNameT>* names) {
+    auto get_names = [this](std::vector<PlainSeriesMatcher::SeriesNameT>* names,
+                            std::vector<Location>* locations) {
       std::lock_guard<std::mutex> guard(lock_);
-      global_matcher_.pull_new_names(names);
+      global_matcher_.pull_new_names(names, locations);
     };
 
-    while(done_.load() == 0) {
+    while (done_.load() == 0) {
       auto status = metadata_->wait_for_sync_request(SYNC_REQUEST_TIMEOUT);
       if (status == common::Status::Ok()) {
         bstore_->flush();
