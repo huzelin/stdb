@@ -11,6 +11,7 @@
 #include <boost/range/iterator_range.hpp>
 
 #include "stdb/common/basic.h"
+#include "stdb/common/exception.h"
 #include "stdb/common/logging.h"
 
 namespace stdb {
@@ -37,7 +38,6 @@ using TimeOrder = TimeOrderImpl<dir, double>;
 template <int dir>
 using EventTimeOrder = TimeOrderImpl<dir, std::string>;
 
-
 /**
  * This predicate is used by the join materializer.
  * Merge join should preserve order of the series supplied by the user.
@@ -54,7 +54,6 @@ struct MergeJoinOrder {
     return std::get<0>(std::get<0>(lhs)) < std::get<0>(std::get<0>(rhs));
   }
 };
-
 
 template <int dir, class ValueT>  // 0 - forward, 1 - backward
 struct SeriesOrderImpl {
@@ -76,13 +75,49 @@ struct SeriesOrderImpl {
   }
 };
 
-
 template<int dir>
 using SeriesOrder = SeriesOrderImpl<dir, double>;
 
 template<int dir>
 using EventSeriesOrder = SeriesOrderImpl<dir, std::string>;
 
+namespace internal {
+// The range
+template <typename VType, int RANGE_SIZE>
+struct Range {
+  std::vector<Timestamp> ts;
+  std::vector<VType> xs;
+  ParamId id;
+  size_t size;
+  size_t pos;
+
+  Range(ParamId id) : id(id), size(0), pos(0) {
+    ts.resize(RANGE_SIZE);
+    xs.resize(RANGE_SIZE);
+  }
+
+  void advance() {
+    pos++;
+  }
+
+  void retreat() {
+    assert(pos);
+    pos--;
+  }
+
+  bool empty() const {
+    return !(pos < size);
+  }
+
+  std::tuple<Timestamp, ParamId> top_key() const {
+    return std::make_tuple(ts.at(pos), id);
+  }
+
+  const VType& top_value() const {
+    return xs.at(pos);
+  }
+};
+}  // namespace internal
 
 template <template <int dir> class CmpPred, bool IsStable = false>
 struct MergeMaterializer : ColumnMaterializer {
@@ -91,59 +126,19 @@ struct MergeMaterializer : ColumnMaterializer {
   bool forward_;
 
   enum {
-    RANGE_SIZE=1024
+    RANGE_SIZE = 1024
   };
 
-  struct Range {
-    std::vector<Timestamp> ts;
-    std::vector<double> xs;
-    ParamId id;
-    size_t size;
-    size_t pos;
-
-    Range(ParamId id)
-        : id(id)
-          , size(0)
-          , pos(0)
-    {
-      ts.resize(RANGE_SIZE);
-      xs.resize(RANGE_SIZE);
-    }
-
-    void advance() {
-      pos++;
-    }
-
-    void retreat() {
-      assert(pos);
-      pos--;
-    }
-
-    bool empty() const {
-      return !(pos < size);
-    }
-
-    std::tuple<Timestamp, ParamId> top_key() const {
-      return std::make_tuple(ts.at(pos), id);
-    }
-
-    double top_value() const {
-      return xs.at(pos);
-    }
-  };
-
+  typedef internal::Range<double, RANGE_SIZE> Range;
   std::vector<Range> ranges_;
 
   MergeMaterializer(std::vector<ParamId>&& ids, std::vector<std::unique_ptr<RealValuedOperator>>&& it)
-      : iters_(std::move(it))
-        , ids_(std::move(ids))
-        , forward_(true)
-  {
+      : iters_(std::move(it)), ids_(std::move(ids)), forward_(true) {
     if (!iters_.empty()) {
       forward_ = iters_.front()->get_direction() == RealValuedOperator::Direction::FORWARD;
     }
     if (iters_.size() != ids_.size()) {
-      LOG(FATAL) << "MergeIterator - broken invariant";
+      STDB_THROW("iters_.size()=", iters_.size(), " ids_.size()=", ids_.size());
     }
   }
 
@@ -154,10 +149,10 @@ struct MergeMaterializer : ColumnMaterializer {
     return kway_merge<1>(dest, size);
   }
 
-  template<int dir>
+  template <int dir>
   std::tuple<common::Status, size_t> kway_merge(u8* dest, size_t size) {
     if (iters_.empty()) {
-      return std::make_tuple(common::Status::NoData(""), 0);
+      return std::make_tuple(common::Status::NoData(), 0);
     }
     size_t outpos = 0;
     if (ranges_.empty()) {
@@ -185,7 +180,7 @@ struct MergeMaterializer : ColumnMaterializer {
     Heap heap;
 
     int index = 0;
-    for(auto& range: ranges_) {
+    for (auto& range: ranges_) {
       if (!range.empty()) {
         KeyType key = range.top_key();
         heap.push(std::make_tuple(key, range.top_value(), index));
@@ -197,11 +192,12 @@ struct MergeMaterializer : ColumnMaterializer {
       KEY = 0,
       VALUE = 1,
       INDEX = 2,
+
       TIME = 0,
       ID = 1,
     };
 
-    while(!heap.empty()) {
+    while (!heap.empty()) {
       HeapItem item = heap.top();
       KeyType point = std::get<KEY>(item);
       u32 index = std::get<INDEX>(item);
@@ -241,70 +237,31 @@ struct MergeMaterializer : ColumnMaterializer {
       ranges_.clear();
     }
     // All iterators are fully consumed
-    return std::make_tuple(common::Status::NoData(""), outpos);
+    return std::make_tuple(common::Status::NoData(), outpos);
   }
 };
 
-template<template <int dir> class CmpPred, bool IsStable = false>
+template <template <int dir> class CmpPred, bool IsStable = false>
 struct MergeEventMaterializer : ColumnMaterializer {
   std::vector<std::unique_ptr<BinaryDataOperator>> iters_;
   std::vector<ParamId> ids_;
   bool forward_;
 
   enum {
-    RANGE_SIZE=1024
+    RANGE_SIZE = 1024
   };
-
-  struct Range {
-    std::vector<Timestamp> ts;
-    std::vector<std::string> xs;
-    ParamId id;
-    size_t size;
-    size_t pos;
-
-    Range(ParamId id)
-        : id(id)
-          , size(0)
-          , pos(0)
-    {
-      ts.resize(RANGE_SIZE);
-      xs.resize(RANGE_SIZE);
-    }
-
-    void advance() {
-      pos++;
-    }
-
-    void retreat() {
-      assert(pos);
-      pos--;
-    }
-
-    bool empty() const {
-      return !(pos < size);
-    }
-
-    std::tuple<Timestamp, ParamId> top_key() const {
-      return std::make_tuple(ts.at(pos), id);
-    }
-
-    std::string top_value() const {
-      return xs.at(pos);
-    }
-  };
-
+  typedef internal::Range<std::string, RANGE_SIZE> Range;
   std::vector<Range> ranges_;
 
   MergeEventMaterializer(std::vector<ParamId>&& ids, std::vector<std::unique_ptr<BinaryDataOperator>>&& it)
       : iters_(std::move(it))
         , ids_(std::move(ids))
-        , forward_(true)
-  {
+        , forward_(true) {
     if (!iters_.empty()) {
       forward_ = iters_.front()->get_direction() == BinaryDataOperator::Direction::FORWARD;
     }
     if (iters_.size() != ids_.size()) {
-      LOG(FATAL) << "MergeIterator - broken invariant";
+      STDB_THROW("iters_.size()=", iters_.size(), " ids_.size()=", ids_.size());
     }
   }
 
@@ -318,7 +275,7 @@ struct MergeEventMaterializer : ColumnMaterializer {
   template<int dir>
   std::tuple<common::Status, size_t> kway_merge(u8* dest, size_t size) {
     if (iters_.empty()) {
-      return std::make_tuple(common::Status::NoData(""), 0);
+      return std::make_tuple(common::Status::NoData(), 0);
     }
     size_t outpos = 0;
     if (ranges_.empty()) {
@@ -346,7 +303,7 @@ struct MergeEventMaterializer : ColumnMaterializer {
     Heap heap;
 
     int index = 0;
-    for(auto& range: ranges_) {
+    for (auto& range: ranges_) {
       if (!range.empty()) {
         KeyType key = range.top_key();
         heap.push(std::make_tuple(key, range.top_value(), index));
@@ -358,17 +315,17 @@ struct MergeEventMaterializer : ColumnMaterializer {
       KEY = 0,
       VALUE = 1,
       INDEX = 2,
+
       TIME = 0,
       ID = 1,
     };
 
-    while(!heap.empty()) {
+    while (!heap.empty()) {
       HeapItem item = heap.top();
       KeyType point = std::get<KEY>(item);
       u32 index = std::get<INDEX>(item);
 
       // Produce sample
-
       std::string const& evt = std::get<VALUE>(item);
       // Check size
       u16 size_required = sizeof(Sample) + evt.size();
@@ -411,7 +368,7 @@ struct MergeEventMaterializer : ColumnMaterializer {
       ranges_.clear();
     }
     // All iterators are fully consumed
-    return std::make_tuple(common::Status::NoData(""), outpos);
+    return std::make_tuple(common::Status::NoData(), outpos);
   }
 };
 
@@ -428,7 +385,7 @@ std::tuple<ParamId, Timestamp> make_sord(Sample const* s) {
 
 }  // namespace
 
-template<int dir, class TKey, TKey (*fnmake)(const Sample*)>  // TKey expected to be tuple
+template <int dir, class TKey, TKey (*fnmake)(const Sample*)>  // TKey expected to be tuple
 struct OrderBy {
   typedef TKey KeyType;
   struct HeapItem {
@@ -464,9 +421,8 @@ using OrderBySeries = OrderBy<dir, std::tuple<ParamId, Timestamp>, &make_sord>;
  */
 template <template <int dir> class CmpPred>
 struct MergeJoinMaterializer : ColumnMaterializer {
-
   enum {
-    RANGE_SIZE=1024
+    RANGE_SIZE = 1024
   };
 
   struct Range {
@@ -475,11 +431,7 @@ struct MergeJoinMaterializer : ColumnMaterializer {
     u32 pos;
     u32 last_advance;
 
-    Range()
-        : size(0u)
-          , pos(0u)
-          , last_advance(0u)
-    {
+    Range() : size(0u), pos(0u), last_advance(0u) {
       buffer.resize(RANGE_SIZE * sizeof(Sample));
     }
 
@@ -514,10 +466,7 @@ struct MergeJoinMaterializer : ColumnMaterializer {
   std::vector<Range> ranges_;
 
   MergeJoinMaterializer(std::vector<std::unique_ptr<ColumnMaterializer>>&& it, bool forward)
-      : iters_(std::move(it))
-        , forward_(forward)
-  {
-  }
+      : iters_(std::move(it)), forward_(forward) { }
 
   virtual std::tuple<common::Status, size_t> read(u8* dest, size_t size) {
     if (forward_) {
@@ -526,10 +475,10 @@ struct MergeJoinMaterializer : ColumnMaterializer {
     return kway_merge<1>(dest, size);
   }
 
-  template<int dir>
+  template <int dir>
   std::tuple<common::Status, size_t> kway_merge(u8* dest, size_t size) {
     if (iters_.empty()) {
-      return std::make_tuple(common::Status::NoData(""), 0);
+      return std::make_tuple(common::Status::NoData(), 0);
     }
     size_t outpos = 0;
     if (ranges_.empty()) {
@@ -565,7 +514,7 @@ struct MergeJoinMaterializer : ColumnMaterializer {
       index++;
     }
 
-    while(!heap.empty()) {
+    while (!heap.empty()) {
       HeapItem item = heap.top();
       size_t index = item.index;
       Sample const* sample = item.sample;
@@ -599,7 +548,7 @@ struct MergeJoinMaterializer : ColumnMaterializer {
       ranges_.clear();
     }
     // All iterators are fully consumed
-    return std::make_tuple(common::Status::NoData(""), outpos);
+    return std::make_tuple(common::Status::NoData(), outpos);
   }
 };
 

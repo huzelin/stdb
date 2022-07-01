@@ -7,10 +7,10 @@ namespace stdb {
 namespace storage {
 
 std::tuple<common::Status, size_t> ChainOperator::read(Timestamp *destts, double *destval, size_t size) {
-  common::Status status = common::Status::NoData("");
+  common::Status status = common::Status::NoData();
   size_t ressz = 0;  // current size
   size_t accsz = 0;  // accumulated size
-  while(iter_index_ < iter_.size()) {
+  while (iter_index_ < iter_.size()) {
     std::tie(status, ressz) = iter_[iter_index_]->read(destts, destval, size);
     destts += ressz;
     destval += ressz;
@@ -46,7 +46,7 @@ ChainMaterializer::ChainMaterializer(std::vector<ParamId>&& ids, std::vector<std
 }
 
 std::tuple<common::Status, size_t> ChainMaterializer::read(u8 *dest, size_t dest_size) {
-  common::Status status = common::Status::NoData("");
+  common::Status status = common::Status::NoData();
   size_t ressz = 0;  // current size
   size_t accsz = 0;  // accumulated size
   size_t size = dest_size / sizeof(Sample);
@@ -55,10 +55,10 @@ std::tuple<common::Status, size_t> ChainMaterializer::read(u8 *dest, size_t dest
   std::vector<ParamId> outids(size, 0);
   Timestamp* destts = destts_vec.data();
   double* destval = destval_vec.data();
-  while(pos_ < iters_.size()) {
+  while (pos_ < iters_.size()) {
     ParamId curr = ids_[pos_];
     std::tie(status, ressz) = iters_[pos_]->read(destts, destval, size);
-    for (size_t i = accsz; i < accsz+ressz; i++) {
+    for (size_t i = accsz; i < accsz + ressz; i++) {
       outids[i] = curr;
     }
     destts += ressz;
@@ -88,7 +88,7 @@ std::tuple<common::Status, size_t> ChainMaterializer::read(u8 *dest, size_t dest
     sample->timestamp = destts_vec[i];
     sample->payload.float64 = destval_vec[i];
   }
-  return std::make_tuple(status, accsz*sizeof(Sample));
+  return std::make_tuple(status, accsz * sizeof(Sample));
 }
 
 EventChainMaterializer::EventChainMaterializer(
@@ -98,7 +98,7 @@ EventChainMaterializer::EventChainMaterializer(
 }
 
 std::tuple<common::Status, size_t> EventChainMaterializer::read(u8 *dest, size_t dest_size) {
-  common::Status status = common::Status::NoData("");
+  common::Status status = common::Status::NoData();
   size_t accsz = 0;  // accumulated size
 
   while (pos_ < iters_.size()) {
