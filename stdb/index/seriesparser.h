@@ -69,6 +69,21 @@ struct SeriesMatcherBase {
    * Convert id to string
    */
   virtual StringT id2str(i64 tokenid) const = 0;
+
+  /**
+   * pull new names
+   */
+  virtual void pull_new_names(std::vector<SeriesNameT>* buffer) = 0;
+
+  /**
+   * pull new names and locations
+   */
+  virtual void pull_new_names(std::vector<SeriesNameT>* name_buffer, std::vector<Location>* location_buffer) = 0;
+
+  /**
+   * get all ids
+   */
+  virtual std::vector<i64> get_all_ids() const = 0;
 };
 
 /** Series index. Can be used to retreive series names and ids by tags.
@@ -126,9 +141,17 @@ struct SeriesMatcher : SeriesMatcherBase {
   /** Push all new elements to the buffer.
    * @param buffer is an output parameter that will receive new elements
    */
-  void pull_new_names(std::vector<SeriesNameT>* buffer);
+  void pull_new_names(std::vector<SeriesNameT>* buffer) override;
 
-  std::vector<i64> get_all_ids() const;
+  /**
+   * pull new names and locations to the buffer
+   */
+  void pull_new_names(std::vector<SeriesNameT>* name_buffer, std::vector<Location>* location_buffer) override;
+  
+  /**
+   * get all the ids
+   */
+  std::vector<i64> get_all_ids() const override;
 
   std::vector<SeriesNameT> search(IndexQueryNodeBase const& query) const;
 
@@ -201,9 +224,17 @@ struct PlainSeriesMatcher : SeriesMatcherBase {
   /** Push all new elements to the buffer.
    * @param buffer is an output parameter that will receive new elements
    */
-  void pull_new_names(std::vector<SeriesNameT>* buffer);
+  void pull_new_names(std::vector<SeriesNameT>* buffer) override;
 
-  std::vector<i64> get_all_ids() const;
+  /**
+   * pull all new names and locations to the buffer
+   */
+  void pull_new_names(std::vector<SeriesNameT>* name_buffer, std::vector<Location>* location_buffer) override;
+
+  /**
+   * get all the ids
+   */
+  std::vector<i64> get_all_ids() const override;
 
   std::vector<SeriesNameT> regex_match(const char* rexp) const;
 

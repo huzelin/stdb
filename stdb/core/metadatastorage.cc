@@ -89,9 +89,11 @@ MetadataStorage::MetadataStorage(const char* db)
   }
 }
 
-void MetadataStorage::sync_with_metadata_storage(std::function<void(std::vector<SeriesT>*)> pull_new_names) {
+void MetadataStorage::sync_with_metadata_storage(
+    std::function<void(std::vector<SeriesT>*, std::vector<Location>*)> pull_new_names) {
   // Make temporary copies under the lock
   std::vector<PlainSeriesMatcher::SeriesNameT>           newnames;
+  std::vector<Location>                 locations;
   std::unordered_map<ParamId, std::vector<u64>> rescue_points;
   std::unordered_map<u32, VolumeDesc>               volume_records;
   {
@@ -99,7 +101,7 @@ void MetadataStorage::sync_with_metadata_storage(std::function<void(std::vector<
     std::swap(rescue_points, pending_rescue_points_);
     std::swap(volume_records, pending_volumes_);
   }
-  pull_new_names(&newnames);
+  pull_new_names(&newnames, &locations);
 
   // This lock is needed to prevent race condition during log replay.
   // When log replay completes, recovery procedure have to start synchronization
