@@ -19,7 +19,6 @@ cc_library(
   hdrs = [
     "basic.h",
     "blocking_queue.h",
-    "config.h",
     "crc32c.h",
     "datetime.h",
     "exception.h",
@@ -34,7 +33,6 @@ cc_library(
     "singleton.h",
     "thread_local.h",
     "timer.h",
-    "types.h",
     "signal_handler.h",
     "strutil.h",
   ],
