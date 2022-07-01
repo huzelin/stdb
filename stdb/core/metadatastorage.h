@@ -149,7 +149,7 @@ struct MetadataStorage : storage::VolumeRegistry {
 
   /** Add new series to the metadata storage (generate sql query and execute it).
   */
-  void insert_new_names(std::vector<SeriesT>&& items);
+  void insert_new_names(std::vector<SeriesT>&& items, std::vector<Location>&& locations);
 
   /** Insert or update rescue provided points (generate sql query and execute it).
   */
