@@ -7,6 +7,8 @@ cc_library(
   name = "index",
   srcs = [
     "invertedindex.cc",
+    "plain_series_matcher.cc",
+    "series_matcher.cc",
     "seriesparser.cc",
     "stringpool.cc",
   ],
@@ -14,6 +16,9 @@ cc_library(
     "invertedindex.h",
     "seriesparser.h",
     "stringpool.h",
+    "plain_series_matcher.h",
+    "series_matcher.h",
+    "series_matcher_base.h",
   ],
   alwayslink = 1,
   copts = [

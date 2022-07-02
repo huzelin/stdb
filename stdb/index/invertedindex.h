@@ -27,6 +27,7 @@
 #include <sstream>
 
 #include "stdb/common/basic.h"
+#include "stdb/common/exception.h"
 #include "stdb/common/logging.h"
 #include "stdb/common/status.h"
 #include "stdb/index/stringpool.h"
@@ -214,7 +215,7 @@ struct Base128StreamReader {
     Base128Int<u64> value;
     auto p = value.get(pos_, end_);
     if (p == pos_) {
-      LOG(FATAL) << "Base128Stream read error";
+      STDB_THROW("Base128Stream read error");
     }
     pos_ = p;
     return static_cast<u64>(value);

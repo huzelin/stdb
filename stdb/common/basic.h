@@ -43,9 +43,10 @@ typedef int8_t   i8;
 
 typedef u64 Timestamp;  //< Timestamp
 typedef u64 ParamId;    //< Parameter (or sequence) id
+typedef float LocationType;
 typedef struct {
-  float lon;
-  float lat;
+  LocationType lon;
+  LocationType lat;
 } Location;
 
 //! Payload data
