@@ -770,7 +770,7 @@ void Storage::run_inputlog_recovery(storage::ShardedInputLog* ilog, std::vector<
     }
     if (done_.load() == 1) {
       // Save finall mapping (should contain all affected columns)
-      metadata_->sync_with_metadata_storage(boost::bind(&SeriesMatcher::pull_new_names, &global_matcher_, _1));
+      metadata_->sync_with_metadata_storage(boost::bind(&SeriesMatcher::pull_new_series, &global_matcher_, _1));
     }
   }
   bstore_->flush();
@@ -1165,7 +1165,7 @@ void Storage::start_sync_worker() {
     auto get_names = [this](std::vector<PlainSeriesMatcher::SeriesNameT>* names,
                             std::vector<Location>* locations) {
       std::lock_guard<std::mutex> guard(lock_);
-      global_matcher_.pull_new_names(names, locations);
+      global_matcher_.pull_new_series(names, locations);
     };
 
     while (done_.load() == 0) {
@@ -1221,7 +1221,7 @@ void Storage::close() {
       metadata_->add_rescue_point(id, std::move(vals));
     }
     // Save finall mapping (should contain all affected columns)
-    metadata_->sync_with_metadata_storage(boost::bind(&SeriesMatcher::pull_new_names, &global_matcher_, _1));
+    metadata_->sync_with_metadata_storage(boost::bind(&SeriesMatcher::pull_new_series, &global_matcher_, _1));
   }
   bstore_->flush();
 

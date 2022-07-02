@@ -22,6 +22,7 @@
 #include <boost/exception/diagnostic_information.hpp>
 
 #include <sqlite3.h>  // to set trace callback
+#include "stdb/common/exception.h"
 
 namespace stdb {
 
@@ -90,7 +91,7 @@ MetadataStorage::MetadataStorage(const char* db)
 }
 
 void MetadataStorage::sync_with_metadata_storage(
-    std::function<void(std::vector<SeriesT>*, std::vector<Location>*)> pull_new_names) {
+    std::function<void(std::vector<SeriesT>*, std::vector<Location>*)> pull_new_series) {
   // Make temporary copies under the lock
   std::vector<PlainSeriesMatcher::SeriesNameT>           newnames;
   std::vector<Location>                 locations;
@@ -101,7 +102,7 @@ void MetadataStorage::sync_with_metadata_storage(
     std::swap(rescue_points, pending_rescue_points_);
     std::swap(volume_records, pending_volumes_);
   }
-  pull_new_names(&newnames, &locations);
+  pull_new_series(&newnames, &locations);
 
   // This lock is needed to prevent race condition during log replay.
   // When log replay completes, recovery procedure have to start synchronization
@@ -118,9 +119,9 @@ void MetadataStorage::sync_with_metadata_storage(
   }
   //:TODO
 
-  // Save new names
+  // Save new series
   begin_transaction();
-  insert_new_names(std::move(newnames), std::move(locations));
+  insert_new_series(std::move(newnames), std::move(locations));
 
   // Save rescue points
   upsert_rescue_points(std::move(rescue_points));
@@ -354,7 +355,7 @@ static bool split_series(const char* str, int n, LightweightString* outname, Lig
   // Skip space
   auto end = str + n;
   str = str + len;
-  while(str < end && (*str == ' ' || *str == '\t')) {
+  while (str < end && (*str == ' ' || *str == '\t')) {
     str++;
   }
   if (str == end) {
@@ -413,7 +414,7 @@ void MetadataStorage::upsert_volume_records(std::unordered_map<u32, VolumeDesc>&
   for (const auto& kv: input) {
     items.push_back(kv.second);
   }
-  while(!items.empty()) {
+  while (!items.empty()) {
     const size_t batchsize = 500;  // This limit is defined by SQLITE_MAX_COMPOUND_SELECT
     const size_t newsize = items.size() > batchsize ? items.size() - batchsize : 0;
     std::vector<VolumeDesc> batch(items.begin() + static_cast<ssize_t>(newsize), items.end());
@@ -445,7 +446,7 @@ void MetadataStorage::upsert_rescue_points(std::unordered_map<ParamId, std::vect
   std::stringstream query;
   typedef std::pair<ParamId, std::vector<u64>> ValueT;
   std::vector<ValueT> items(input.begin(), input.end());
-  while(!items.empty()) {
+  while (!items.empty()) {
     const size_t batchsize = 500;  // This limit is defined by SQLITE_MAX_COMPOUND_SELECT
     const size_t newsize = items.size() > batchsize ? items.size() - batchsize : 0;
     std::vector<ValueT> batch(items.begin() + static_cast<ssize_t>(newsize), items.end());
@@ -478,7 +479,7 @@ void MetadataStorage::upsert_rescue_points(std::unordered_map<ParamId, std::vect
   execute_query(query.str());
 }
 
-void MetadataStorage::insert_new_names(std::vector<SeriesT> &&items, std::vector<Location>&& locations) {
+void MetadataStorage::insert_new_series(std::vector<SeriesT> &&items, std::vector<Location>&& locations) {
   if (items.size() == 0) {
     return;
   }
@@ -551,7 +552,7 @@ boost::optional<i64> MetadataStorage::get_prev_largest_id() {
 }
 
 common::Status MetadataStorage::load_matcher_data(SeriesMatcherBase& matcher) {
-  auto query = "SELECT series_id || ' ' || keyslist, storage_id FROM stdb_series;";
+  auto query = "SELECT series_id || ' ' || keyslist, storage_id, lon, lat FROM stdb_series;";
   try {
     auto results = select_query(query);
     for(auto row: results) {
@@ -560,6 +561,8 @@ common::Status MetadataStorage::load_matcher_data(SeriesMatcherBase& matcher) {
       }
       auto series = row.at(0);
       auto id = boost::lexical_cast<i64>(row.at(1));
+      auto lon = boost::lexical_cast<LocationType>(row.at(2));
+      auto lat = boost::lexical_cast<LocationType>(row.at(3));
       matcher._add(series, id);
     }
   } catch(...) {
