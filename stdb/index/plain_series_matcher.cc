@@ -31,7 +31,7 @@ PlainSeriesMatcher::PlainSeriesMatcher(i64 starting_id)
     : table(StringTools::create_table(0x1000))
     , series_id(starting_id) {
   if (starting_id == 0u) {
-    LOG(FATAL) << "Bad series ID";
+    STDB_THROW("Bad series ID, starting_id=", starting_id);
   }
 }
 
@@ -56,14 +56,14 @@ i64 PlainSeriesMatcher::add_impl(const char* begin, const char* end) {
   return id;
 }
 
-void PlainSeriesMatcher::_add(std::string series, i64 id) {
+void PlainSeriesMatcher::_add(const std::string& series, i64 id) {
   if (series.empty()) {
     return;
   }
   _add(series.data(), series.data() + series.size(), id);
 }
 
-void PlainSeriesMatcher::_add(std::string series, i64 id, const Location& location) {
+void PlainSeriesMatcher::_add(const std::string& series, i64 id, const Location& location) {
   if (series.empty()) {
     return;
   }
@@ -145,7 +145,7 @@ std::vector<PlainSeriesMatcher::SeriesNameT> PlainSeriesMatcher::regex_match(con
     if (it == table.end()) {
       // We should always find id by string, otherwise - invariant is
       // broken (due to memory corruption most likely).
-      LOG(FATAL) << "Invalid string-pool.";
+      STDB_THROW("Invalid string-pool");
     }
     return std::make_tuple(s.first, s.second, it->second);
   });

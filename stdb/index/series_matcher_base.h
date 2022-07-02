@@ -50,8 +50,8 @@ struct SeriesMatcherBase {
    * `series_id` counter wouldn't be affected by this call, so
    * it should be set up propertly in constructor.
    */
-  virtual void _add(std::string series, i64 id) = 0;
-  virtual void _add(std::string series, i64 id, const Location& location) = 0;
+  virtual void _add(const std::string& series, i64 id) = 0;
+  virtual void _add(const std::string& series, i64 id, const Location& location) = 0;
 
   /** Add value to matcher. This function should be
    * used only to load data to matcher. Internal

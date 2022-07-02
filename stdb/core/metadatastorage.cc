@@ -561,9 +561,10 @@ common::Status MetadataStorage::load_matcher_data(SeriesMatcherBase& matcher) {
       }
       auto series = row.at(0);
       auto id = boost::lexical_cast<i64>(row.at(1));
-      auto lon = boost::lexical_cast<LocationType>(row.at(2));
-      auto lat = boost::lexical_cast<LocationType>(row.at(3));
-      matcher._add(series, id);
+      Location location;
+      location.lon = boost::lexical_cast<LocationType>(row.at(2));
+      location.lat = boost::lexical_cast<LocationType>(row.at(3));
+      matcher._add(series, id, location);
     }
   } catch(...) {
     LOG(ERROR) << boost::current_exception_diagnostic_information().c_str();

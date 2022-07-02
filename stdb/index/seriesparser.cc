@@ -343,7 +343,7 @@ void GroupByTag::refresh_() {
           // local name already created
           auto localid = local_matcher_.match(result.first, result.first + result.second);
           if (localid == 0ul) {
-            LOG(FATAL) << "inconsistent matcher state";
+            STDB_THROW("inconsistent matcher state");
           }
           ids_[static_cast<ParamId>(std::get<2>(item))] = static_cast<ParamId>(localid);
         }

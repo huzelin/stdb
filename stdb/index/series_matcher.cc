@@ -31,7 +31,7 @@ SeriesMatcher::SeriesMatcher(i64 starting_id)
     : table(StringTools::create_table(0x1000))
       , series_id(starting_id) {
   if (starting_id == 0u) {
-    LOG(FATAL) << "Bad series ID";
+    STDB_THROW("Bad series ID, starting_id=", starting_id);
   }
 }
 
@@ -67,14 +67,14 @@ i64 SeriesMatcher::add_impl(const char* begin, const char* end) {
   return id;
 }
 
-void SeriesMatcher::_add(std::string series, i64 id) {
+void SeriesMatcher::_add(const std::string& series, i64 id) {
   if (series.empty()) {
     return;
   }
   _add(series.data(), series.data() + series.size(), id);
 }
 
-void SeriesMatcher::_add(std::string series, i64 id, const Location& location) {
+void SeriesMatcher::_add(const std::string& series, i64 id, const Location& location) {
   if (series.empty()) {
     return;
   }
@@ -152,7 +152,6 @@ std::vector<SeriesMatcher::SeriesNameT> SeriesMatcher::search(IndexQueryNodeBase
     auto str = *it;
     auto fit = table.find(str);
     if (fit == table.end()) {
-      // LOG(FATAL) << "Invalid index state";
       STDB_THROW("Invalid index state");
     }
     result.push_back(std::make_tuple(str.first, str.second, fit->second));

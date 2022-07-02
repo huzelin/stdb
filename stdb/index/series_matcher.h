@@ -64,8 +64,8 @@ struct SeriesMatcher : SeriesMatcherBase {
    * `series_id` counter wouldn't be affected by this call, so
    * it should be set up propertly in constructor.
    */
-  void _add(std::string series, i64 id) override;
-  void _add(std::string series, i64 id, const Location& location) override;
+  void _add(const std::string& series, i64 id) override;
+  void _add(const std::string& series, i64 id, const Location& location) override;
 
   /** Add value to matcher. This function should be
    * used only to load data to matcher. Internal
