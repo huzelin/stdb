@@ -14,9 +14,10 @@ cc_library(
   ],
   hdrs = [
     "invertedindex.h",
+    "plain_series_matcher.h",
+    "rtree.h",
     "seriesparser.h",
     "stringpool.h",
-    "plain_series_matcher.h",
     "series_matcher.h",
     "series_matcher_base.h",
   ],
@@ -53,6 +54,16 @@ cc_test(
 cc_test(
   name = "seriesparser_test",
   srcs = ["seriesparser_test.cc"],
+  deps = [
+    "@gtest//:gtest",
+    "@gtest//:gtest_main",
+    ":index",
+  ],
+)
+
+cc_test(
+  name = "rtree_test",
+  srcs = ["rtree_test.cc"],
   deps = [
     "@gtest//:gtest",
     "@gtest//:gtest_main",

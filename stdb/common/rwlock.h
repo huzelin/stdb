@@ -54,6 +54,8 @@ struct LockGuard {
 
 using UniqueLock = LockGuard<RWLock, &RWLock::wrlock>;
 using SharedLock = LockGuard<RWLock, &RWLock::wrlock>;
+using ReadLockGuard = LockGuard<RWLock, &RWLock::rdlock>;
+using WriteLockGuard = LockGuard<RWLock, &RWLock::wrlock>;
 
 }  // namespace common
 }  // namespace stdb
