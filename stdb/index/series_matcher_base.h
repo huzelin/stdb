@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef STDB_CORE_SERIES_MATCHER_BASE_H_
-#define STDB_CORE_SERIES_MATCHER_BASE_H_
+#ifndef STDB_INDEX_SERIES_MATCHER_BASE_H_
+#define STDB_INDEX_SERIES_MATCHER_BASE_H_
 
 #include <deque>
 #include <map>
@@ -89,4 +89,4 @@ struct SeriesMatcherBase {
 
 }  // namespace stdb
 
-#endif  // STDB_CORE_SERIES_MATCHER_BASE_H_
+#endif  // STDB_INDEX_SERIES_MATCHER_BASE_H_
