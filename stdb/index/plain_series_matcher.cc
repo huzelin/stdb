@@ -82,7 +82,11 @@ void PlainSeriesMatcher::_add(const char* begin, const char* end, i64 id, const 
   std::lock_guard<std::mutex> guard(mutex);
   table[pstr] = id;
   inv_table[id] = pstr;
-  // TODO: add spatial index.
+
+  rtree::RTree<LocationType, RTREE_NDIMS, RTREE_BLOCK_SIZE>::Point point;
+  point.data[0] = location.lon;
+  point.data[1] = location.lat;
+  rtree_index.Insert(point, id);
 }
 
 i64 PlainSeriesMatcher::match(const char* begin, const char* end) const {

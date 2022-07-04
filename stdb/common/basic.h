@@ -31,6 +31,8 @@ namespace stdb {
 #define STDB_MAX_TIMESTAMP (~0ull)
 #define STDB_LIMITS_MAX_EVENT_LEN 4096
 #define STDB_LIMITS_MAX_ROW_WIDTH 0x100
+#define RTREE_NDIMS 2
+#define RTREE_BLOCK_SIZE 2048
 
 typedef uint64_t u64;
 typedef int64_t  i64;

@@ -75,6 +75,7 @@ TEST(TestRTree, Insert) {
     rtree.Insert(point, payload++);
   }
   LOG(INFO) << rtree.DebugString();
+  rtree.CheckValid();
 
   {
     // Range query
@@ -84,7 +85,8 @@ TEST(TestRTree, Insert) {
     rect.max.data[0] = 120.323;
     rect.max.data[1] = 32.363;
     std::vector<i64> results;
-    rtree.RangeQuery(rect, results);
+    RTree<float, 2, 96>::QueryStat query_stat;
+    rtree.RangeQuery(rect, results, query_stat);
     EXPECT_EQ(1, results.size());
     EXPECT_EQ(payload - 1, results[0]);
   }
