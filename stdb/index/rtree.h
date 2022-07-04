@@ -60,6 +60,32 @@ struct XRect {
 };
 
 template <typename DType, int NDIMS>
+static inline bool Intersect(const XRect<DType, NDIMS>& rect1, const XRect<DType, NDIMS>& rect2) {
+  for (int i = 0; i < NDIMS; ++i) {
+    if (rect1.max.data[i] < rect2.min.data[i]) {
+      return false;
+    }
+    if (rect1.min.data[i] > rect2.max.data[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+template <typename DType, int NDIMS>
+static inline bool Intersect(const XRect<DType, NDIMS>& rect, const XPoint<DType, NDIMS>& p) {
+  for (int i = 0; i < NDIMS; ++i) {
+    if (rect.min.data[i] > p.data[i]) {
+      return false;
+    }
+    if (rect.max.data[i] < p.data[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+template <typename DType, int NDIMS>
 static inline std::ostream& operator<<(std::ostream& os, const XPoint<DType, NDIMS>& point) {
   os << "(";
   for (int i = 0; i < NDIMS; ++i) {
@@ -81,7 +107,64 @@ static inline std::ostream& operator<<(std::ostream& os, const XRect<DType, NDIM
   return os;
 }
 
-template <typename DType, int NDIMS, int BLOCK_SIZE> 
+// Distance type between point/rect
+enum DistanceType {
+  kEuclidean = 0,
+};
+
+template <typename DType, int NDIMS>
+struct EuclideanDistance {
+  typedef XPoint<DType, NDIMS> Point;
+  typedef XRect<DType, NDIMS> Rect;
+  
+  // Distance between point and rect
+  // @param rect The rect
+  // @param point The point
+  // @return Return the minimum distance
+  static DType Distance(const Rect& rect, const Point& point) {
+    DType dis[NDIMS];
+    for (int i = 0; i < NDIMS; ++i) {
+      dis[i] = point.data[i] > rect.max.data[i] ? point.data[i] - rect.max.data[i] :
+          point.data[i] < rect.min.data[i] ? rect.min.data[i] - point.data[i] : 0;
+    }
+    DType sum = 0;
+    for (int i = 0; i < NDIMS; ++i) {
+      sum += dis[i] * dis[i];
+    }
+    return sqrtf(sum);
+  }
+
+  // Distance between point and point
+  // @param p1 Point 1
+  // @param p2 Point 2
+  // @return distance
+  static DType Distance(const Point& p1, const Point& p2) {
+    DType dis = 0;
+    for (int i = 0; i < NDIMS; ++i) {
+      dis += (p1.data[i] -p2.data[i]) * (p1.data[i] -p2.data[i]);
+    }
+    return sqrtf(dis);
+  }
+
+  // Distance between r1 and r2
+  // @param r1 The rect 1
+  // @param r2 The rect 2
+  // @return distance
+  static DType Distance(const Rect& r1, const Rect& r2) {
+    DType dis[NDIMS];
+    for (int i = 0; i < NDIMS; ++i) {
+      dis[i] = r1.min.data[i] > r2.max.data[i] ? r1.min.data[i] - r2.max.data[i] :
+          r1.max.data[i] < r2.min.data[i] ? r2.min.data[i] - r1.max.data[i] : 0;
+    }
+    DType sum = 0;
+    for (int i = 0; i < NDIMS; ++i) {
+      sum += dis[i] * dis[i];
+    }
+    return sqrtf(sum);
+  }
+};
+
+template <typename DType, int NDIMS, int BLOCK_SIZE, DistanceType distance_type = kEuclidean> 
 class RTree {
  public:
   typedef XPoint<DType, NDIMS> Point;
@@ -93,26 +176,22 @@ class RTree {
   // RTree node base class.
   class Node {
    protected:
-
     NodePtr ptr_;
     u32* size_;
     u32* level_;
 
+   public:
     // Distance between point and rect
     // @param rect The rect
     // @param point The point
     // @return Return the minimum distance
     static DType Distance(const Rect& rect, const Point& point) {
-      DType dis[NDIMS];
-      for (int i = 0; i < NDIMS; ++i) {
-        dis[i] = point.data[i] > rect.max.data[i] ? point.data[i] - rect.max.data[i] :
-            point.data[i] < rect.min.data[i] ? rect.min.data[i] - point.data[i] : 0;
+      switch (distance_type) {
+        case kEuclidean:
+        default: {
+          return EuclideanDistance<DType, NDIMS>::Distance(rect, point);
+        }
       }
-      DType sum = 0;
-      for (int i = 0; i < NDIMS; ++i) {
-        sum += dis[i] * dis[i];
-      }
-      return sqrtf(sum);
     }
 
     // Distance between point and point
@@ -120,11 +199,12 @@ class RTree {
     // @param p2 Point 2
     // @return distance
     static DType Distance(const Point& p1, const Point& p2) {
-      DType dis = 0;
-      for (int i = 0; i < NDIMS; ++i) {
-        dis += (p1.data[i] -p2.data[i]) * (p1.data[i] -p2.data[i]);
+      switch (distance_type) {
+        case kEuclidean:
+        default: {
+          return EuclideanDistance<DType, NDIMS>::Distance(p1, p2);
+        }
       }
-      return sqrtf(dis);
     }
 
     // Distance between r1 and r2
@@ -132,19 +212,14 @@ class RTree {
     // @param r2 The rect 2
     // @return distance
     static DType Distance(const Rect& r1, const Rect& r2) {
-      DType dis[NDIMS];
-      for (int i = 0; i < NDIMS; ++i) {
-        dis[i] = r1.min.data[i] > r2.max.data[i] ? r1.min.data[i] - r2.max.data[i] :
-            r1.max.data[i] < r2.min.data[i] ? r2.min.data[i] - r1.max.data[i] : 0;
+      switch (distance_type) {
+        case kEuclidean:
+        default: {
+          return EuclideanDistance<DType, NDIMS>::Distance(r1, r2);
+        }
       }
-      DType sum = 0;
-      for (int i = 0; i < NDIMS; ++i) {
-        sum += dis[i] * dis[i];
-      }
-      return sqrtf(sum);
     }
 
-   public:
     explicit Node(char* ptr) : ptr_(ptr) {
       size_ = reinterpret_cast<u32*>(ptr);
       level_ = reinterpret_cast<u32*>(ptr + sizeof(u32));
@@ -169,6 +244,19 @@ class RTree {
    public:
     explicit LeafNode(char* ptr) : Node(ptr) {
       entry_ = reinterpret_cast<Entry*>(ptr + 2 * sizeof(u32));
+    }
+
+    // Return the index-th point
+    // @param index
+    // @return the index-th point
+    const Point& point_at(u32 index) {
+      return entry_[index].point;
+    }
+    // Return the index-th point's payload
+    // @param index
+    // @return the index-th point's payload
+    i64 payload_at(u32 index) {
+      return entry_[index].payload;
     }
 
     // Return the debug string
@@ -318,6 +406,9 @@ class RTree {
     }
     NodePtr child(u32 index) {
       return entry_[index].subnode;
+    }
+    const Rect& child_rect(u32 index) {
+      return entry_[index].rect;
     }
 
     // Return debug string
@@ -484,6 +575,99 @@ class RTree {
     }
   }
 
+  // knn query
+  // @param point The poin
+  // @param result The k nearest point for returning
+  void KnnQuery(const Point& point, u32 k, std::vector<i64>& result) {
+    common::ReadLockGuard guard(rwlock_);
+    enum Type {
+      kItem = 0,
+      kLeaf,
+      kIndex,
+    };
+    typedef std::tuple<DType, Type, i64> ElemType;
+    std::priority_queue<ElemType, std::vector<ElemType>, std::greater<ElemType>> pq;
+    pq.push(std::make_tuple(0, kIndex, (i64)root_));
+
+    while (!pq.empty()) {
+      auto t = pq.top(); pq.pop();
+      auto type = std::get<1>(t);
+      auto data = std::get<2>(t);
+
+      switch (type) {
+        case kItem : {
+          result.push_back(data); 
+          if (result.size() >= k) return;
+        } break;
+
+        case kLeaf : {
+          auto node = LeafNode((NodePtr)data);
+          for (u32 i = 0; i < node.size(); ++i) {
+            data = node.payload_at(i);
+            auto& cur_point = node.point_at(i);
+            auto distance = Node::Distance(cur_point, point);
+            pq.push(std::make_tuple(distance, kItem, data));
+          }
+        } break;
+
+        case kIndex : {
+          auto node = IndexNode((NodePtr)data);
+          for (u32 i = 0; i < node.size(); ++i){
+            auto& rect = node.child_rect(i);
+            auto distance = Node::Distance(rect, point);
+            data = (i64)node.child(i);
+            if (node.level() == 1) {
+              pq.push(std::make_tuple(distance, kLeaf, data));
+            } else {
+              pq.push(std::make_tuple(distance, kIndex, data));
+            }
+          }
+        } break;
+      }
+    }
+  }
+
+  // Range query
+  // @param rect The range MBR
+  // @param result The point in the range for returning. 
+  void RangeQuery(const Rect& rect, std::vector<i64>& result) {
+    common::ReadLockGuard guard(rwlock_);
+    std::vector<NodePtr> leafs;
+    std::queue<NodePtr> q;
+    q.push(root_);
+
+    while (!q.empty()) {
+      auto node_ptr = q.front(); q.pop();
+      auto node = IndexNode(node_ptr);
+      if (node.level() != 1) {
+        for (u32 i = 0; i < node.size(); ++i) {
+          auto& r = node.child_rect(i);
+          if (Intersect(r, rect)) {
+            q.push(node.child(i));
+          }
+        }
+      } else {
+        for (u32 i = 0; i < node.size(); ++i) {
+          auto& r = node.child_rect(i);
+          if (Intersect(r, rect)) {
+            leafs.push_back(node.child(i));
+          }
+        }
+      }
+    }
+
+    for (auto& node_ptr : leafs) {
+      auto node = LeafNode(node_ptr);
+      for (u32 i = 0; i < node.size(); ++i) {
+        auto& p = node.point_at(i);
+        if (Intersect(rect, p)) {
+          result.push_back(node.payload_at(i));
+        }
+      }
+    }
+  }
+
+  // Return the debug string of RTree.
   std::string DebugString() {
     common::ReadLockGuard guard(rwlock_);
     std::stringstream ss;
