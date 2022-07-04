@@ -24,10 +24,15 @@ namespace rtree {
 template <int BLOCK_SIZE>
 struct BlockPool : public common::Singleton<BlockPool<BLOCK_SIZE>> {
  public:
+  static const u32 kSize = 32;
+
   char* Allocate() {
     std::lock_guard<std::mutex> lck(mutex_);
     if (blocks_.empty()) {
-      auto ptr = reinterpret_cast<char*>(malloc(BLOCK_SIZE));
+      auto ptr = reinterpret_cast<char*>(malloc(kSize * BLOCK_SIZE));
+      for (u32 i = 1; i < kSize; ++i) {
+        blocks_.push_back(ptr + i * BLOCK_SIZE);
+      }
       return ptr;
     }
     auto ret = blocks_.back();
@@ -86,6 +91,16 @@ static inline bool Intersect(const XRect<DType, NDIMS>& rect, const XPoint<DType
 }
 
 template <typename DType, int NDIMS>
+static inline XRect<DType, NDIMS> Union(const XRect<DType, NDIMS>& r1, const XRect<DType, NDIMS>& r2) {
+  XRect<DType, NDIMS> ret;
+  for (int i = 0; i < NDIMS; ++i) {
+    ret.min.data[i] = std::min(r1.min.data[i], r2.min.data[i]);
+    ret.max.data[i] = std::max(r1.max.data[i], r2.max.data[i]);
+  }
+  return ret;
+}
+
+template <typename DType, int NDIMS>
 static inline std::ostream& operator<<(std::ostream& os, const XPoint<DType, NDIMS>& point) {
   os << "(";
   for (int i = 0; i < NDIMS; ++i) {
@@ -131,7 +146,8 @@ struct EuclideanDistance {
     for (int i = 0; i < NDIMS; ++i) {
       sum += dis[i] * dis[i];
     }
-    return sqrtf(sum);
+    return sum;
+    // return sqrtf(sum);
   }
 
   // Distance between point and point
@@ -143,7 +159,8 @@ struct EuclideanDistance {
     for (int i = 0; i < NDIMS; ++i) {
       dis += (p1.data[i] -p2.data[i]) * (p1.data[i] -p2.data[i]);
     }
-    return sqrtf(dis);
+    return dis;
+    // return sqrtf(dis);
   }
 
   // Distance between r1 and r2
@@ -160,7 +177,8 @@ struct EuclideanDistance {
     for (int i = 0; i < NDIMS; ++i) {
       sum += dis[i] * dis[i];
     }
-    return sqrtf(sum);
+    return sum;
+    // return sqrtf(sum);
   }
 };
 
@@ -575,6 +593,22 @@ class RTree {
     }
   }
 
+  u32 height() {
+    if (root_) {
+      IndexNode node(root_);
+      return node.level() + 1;
+    }
+    return 0;
+  }
+
+  struct QueryStat {
+    u32 touch_counts[32];  // maximum level is 32.
+
+    QueryStat() {
+      memset(touch_counts, 0, sizeof(touch_counts));
+    }
+  };
+
   // knn query
   // @param point The poin
   // @param result The k nearest point for returning
@@ -630,7 +664,7 @@ class RTree {
   // Range query
   // @param rect The range MBR
   // @param result The point in the range for returning. 
-  void RangeQuery(const Rect& rect, std::vector<i64>& result) {
+  void RangeQuery(const Rect& rect, std::vector<i64>& result, QueryStat& query_stat) {
     common::ReadLockGuard guard(rwlock_);
     std::vector<NodePtr> leafs;
     std::queue<NodePtr> q;
@@ -639,6 +673,7 @@ class RTree {
     while (!q.empty()) {
       auto node_ptr = q.front(); q.pop();
       auto node = IndexNode(node_ptr);
+      query_stat.touch_counts[node.level()]++;
       if (node.level() != 1) {
         for (u32 i = 0; i < node.size(); ++i) {
           auto& r = node.child_rect(i);
@@ -658,6 +693,7 @@ class RTree {
 
     for (auto& node_ptr : leafs) {
       auto node = LeafNode(node_ptr);
+      query_stat.touch_counts[node.level()]++;
       for (u32 i = 0; i < node.size(); ++i) {
         auto& p = node.point_at(i);
         if (Intersect(rect, p)) {
@@ -667,8 +703,37 @@ class RTree {
     }
   }
 
+  // Check the tree is valid.
+  void CheckValid() {
+    std::queue<NodePtr> q;
+    q.push(root_);
+    while (!q.empty()) {
+      auto node_ptr = q.front(); q.pop();
+      IndexNode node(node_ptr);
+      
+      for (u32 i = 0; i < node.size(); ++i) {
+        auto child_ptr = node.child(i);
+        auto child_rect = node.child_rect(i);
+
+        if (node.level() > 1) {
+          IndexNode child_node(child_ptr);
+          auto rect = child_node.GetRect();
+          if (memcmp(&child_rect, &rect, sizeof(rect)) != 0) {
+            LOG(ERROR) << "not equal level=" << node.level() << " " << child_rect << " vs " << rect;
+          }
+        } else {
+          LeafNode child_node(child_ptr);
+          auto rect = child_node.GetRect();
+          if (memcmp(&child_rect, &rect, sizeof(rect)) != 0) {
+            LOG(FATAL) << "not equal level=" << node.level() << " " << child_rect << " vs " << rect;
+          }
+        }
+      }
+    }
+  }
+
   // Return the debug string of RTree.
-  std::string DebugString() {
+  std::string DebugString(u32 min_level = 0) {
     common::ReadLockGuard guard(rwlock_);
     std::stringstream ss;
     
@@ -679,7 +744,9 @@ class RTree {
     while (!index_node_ptrs.empty()) {
       auto ptr = index_node_ptrs.front(); index_node_ptrs.pop();
       IndexNode node(ptr);
-      ss << std::endl << node.DebugString() << std::endl;
+      if (node.level() >= min_level) {
+        ss << std::endl << node.DebugString() << std::endl;
+      }
 
       for (u32 i = 0; i < node.size(); ++i) {
         if (node.level() > 1) {
@@ -693,7 +760,9 @@ class RTree {
     while (!leaf_node_ptrs.empty()) {
       auto ptr = leaf_node_ptrs.front(); leaf_node_ptrs.pop();
       LeafNode node(ptr);
-      ss << std::endl << node.DebugString() << std::endl;
+      if (node.level() >= min_level) {
+        ss << std::endl << node.DebugString() << std::endl;
+      }
     }
     return ss.str();
   }
@@ -712,8 +781,6 @@ class RTree {
   // @param index The index
   // @param pos The pos
   void UpdateRect(const std::vector<std::tuple<NodePtr, i32>>& paths, i32 index, u32 pos) {
-    if (pos == 0) return;
-
     auto node_ptr = paths[pos];
     auto index_node = IndexNode(std::get<0>(node_ptr));
 
@@ -725,7 +792,9 @@ class RTree {
       auto child_node = IndexNode(child_ptr);
       index_node.set_rect(index, child_node.GetRect());
     }
-    UpdateRect(paths, std::get<1>(node_ptr), pos - 1);
+    if (pos != 0) {
+      UpdateRect(paths, std::get<1>(node_ptr), pos - 1);
+    }
   }
 
   // Insert from paths
