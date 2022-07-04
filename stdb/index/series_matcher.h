@@ -26,6 +26,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "stdb/index/rtree.h"
 #include "stdb/index/series_matcher_base.h"
 #include "stdb/index/invertedindex.h"
 
@@ -43,6 +44,7 @@ struct SeriesMatcher : SeriesMatcherBase {
   typedef StringTools::TableT TableT;
   typedef StringTools::InvT   InvT;
 
+  rtree::RTree<LocationType, RTREE_NDIMS, RTREE_BLOCK_SIZE> rtree_index;
   Index                    index;      //! Series name index and storage
   TableT                   table;      //! Series table (name to id mapping)
   InvT                     inv_table;  //! Ids table (id to name mapping)

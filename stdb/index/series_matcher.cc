@@ -97,7 +97,11 @@ void SeriesMatcher::_add(const char* begin, const char* end, i64 id, const Locat
   std::tie(status, sname) = index.append(begin, end);
   table[sname] = id;
   inv_table[id] = sname;
-  // TODO: add spatial index.
+
+  rtree::RTree<LocationType, RTREE_NDIMS, RTREE_BLOCK_SIZE>::Point point;
+  point.data[0] = location.lon;
+  point.data[1] = location.lat;
+  rtree_index.Insert(point, id);
 }
 
 i64 SeriesMatcher::match(const char* begin, const char* end) const {

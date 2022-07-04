@@ -344,13 +344,21 @@ class RTree {
       }
 
       std::vector<u32> l_clusters, r_clusters;
+      bool random_l = true;
       for (u32 i = 0; i < this->size(); ++i) {
         auto dis_l = Node::Distance(entry_[l].point, entry_[i].point);
         auto dis_r = Node::Distance(entry_[r].point, entry_[i].point);
         if (dis_l < dis_r) {
           l_clusters.push_back(i);
-        } else {
+        } else if (dis_l > dis_r) {
           r_clusters.push_back(i);
+        } else {
+          if (random_l) {
+            l_clusters.push_back(i);
+          } else {
+            r_clusters.push_back(i);
+          }
+          random_l = !random_l;
         }
       }
       if (l_clusters.empty()) {
@@ -495,13 +503,21 @@ class RTree {
       }
 
       std::vector<u32> l_clusters, r_clusters;
+      bool random_l = true;
       for (u32 i = 0; i < this->size(); ++i) {
         auto dis_l = Node::Distance(entry_[l].rect, entry_[i].rect);
         auto dis_r = Node::Distance(entry_[r].rect, entry_[i].rect);
         if (dis_l < dis_r) {
           l_clusters.push_back(i);
-        } else {
+        } else if (dis_l > dis_r) {
           r_clusters.push_back(i);
+        } else {
+          if (random_l) {
+            l_clusters.push_back(i);
+          } else {
+            r_clusters.push_back(i);
+          }
+          random_l = !random_l;
         }
       }
 

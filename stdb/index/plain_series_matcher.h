@@ -26,6 +26,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "stdb/index/rtree.h"
 #include "stdb/index/series_matcher_base.h"
 
 namespace stdb {
@@ -44,6 +45,7 @@ struct PlainSeriesMatcher : SeriesMatcherBase {
   typedef StringTools::InvT   InvT;
 
   // Variables
+  rtree::RTree<LocationType, RTREE_NDIMS, RTREE_BLOCK_SIZE> rtree_index;
   LegacyStringPool         pool;       //! String pool that stores time-series
   TableT                   table;      //! Series table (name to id mapping)
   InvT                     inv_table;  //! Ids table (id to name mapping)
