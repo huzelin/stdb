@@ -6,6 +6,7 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 cc_library(
   name = "core",
   srcs = [
+    "server_meta_storage.cc",
     #"stdb.cc",
     "cursor.cc",
     "metadatastorage.cc",
@@ -13,6 +14,7 @@ cc_library(
     "storage_api.cc",
   ],
   hdrs = [
+    "server_meta_storage.h",
     #"stdb.h",
     "cursor.h",
     "metadatastorage.h",

@@ -1,5 +1,5 @@
 /**
- * \file metadatastorage.h
+ * \file server_meta_storage.h
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef STDB_CORE_METADATASTORAGE_H_
-#define STDB_CORE_METADATASTORAGE_H_
+#ifndef STDB_CORE_SERVER_META_STORAGE_H_
+#define STDB_CORE_SERVER_META_STORAGE_H_
 
 #include <cstddef>
 #include <memory>
@@ -36,11 +36,10 @@ namespace stdb {
 
 /** Sqlite3 backed storage for metadata.
  * Metadata includes:
- * - Volumes list
  * - Configuration data
  * - Key to id mapping
  */
-struct MetadataStorage : storage::VolumeRegistry {
+struct ServerMetaStorage {
   // Typedefs
   typedef std::unique_ptr<apr_pool_t, decltype(&delete_apr_pool)> PoolT;
   typedef const apr_dbd_driver_t* DriverT;
@@ -58,45 +57,23 @@ struct MetadataStorage : storage::VolumeRegistry {
   mutable std::mutex                                sync_lock_;
   mutable std::mutex                                tran_lock_;
   std::condition_variable                           sync_cvar_;
-  std::unordered_map<ParamId, std::vector<u64>> pending_rescue_points_;
-  std::unordered_map<u32, VolumeDesc>               pending_volumes_;
 
   /** Create new or open existing db.
    * @throw std::runtime_error in a case of error
    */
-  MetadataStorage(const char* db);
-
-  // Creation //
+  ServerMetaStorage(const char* db);
 
   /** Create tables if database is empty
    * @throw std::runtime_error in a case of error
    */
   void create_tables();
 
-  /** Initialize volumes table
+  /** Initialize config 
    * @throw std::runtime_error in a case of error
    */
-  void init_volumes(std::vector<VolumeDesc> volumes);
-
   void init_config(const char* db_name,
                    const char* creation_datetime,
                    const char* bstore_type);
-
-  // Retreival //
-
-  /** Read list of volumes and their sequence numbers.
-   * @throw std::runtime_error in a case of error
-   */
-  virtual std::vector<VolumeDesc> get_volumes();
-
-  /**
-   * @brief Add NEW volume synchroniously
-   * @param vol is a volume description
-   */
-  virtual void add_volume(const VolumeDesc& vol);
-
-  // TODO: add pending size
-  virtual size_t pending_size() { return pending_volumes_.size(); }
 
   /**
    * @brief Get value of the configuration parameter
@@ -111,17 +88,7 @@ struct MetadataStorage : storage::VolumeRegistry {
 
   common::Status load_matcher_data(SeriesMatcherBase &matcher);
 
-  common::Status load_rescue_points(std::unordered_map<u64, std::vector<u64>>& mapping);
-
   // Synchronization
-
-  void add_rescue_point(ParamId id, std::vector<u64>&& val);
-
-  /**
-   * @brief Add/update volume metadata asynchronously
-   * @param vol is a volume description
-   */
-  virtual void update_volume(const VolumeDesc& vol);
   virtual std::string get_dbname();
 
   common::Status wait_for_sync_request(int timeout_us);
@@ -131,29 +98,14 @@ struct MetadataStorage : storage::VolumeRegistry {
   //! Forces `wait_for_sync_request` to return immediately
   void force_sync();
 
-  // should be private:
-
-  void begin_transaction();
-
-  void end_transaction();
-
   /** Add new series to the metadata storage (generate sql query and execute it).
-  */
+   */
   void insert_new_series(std::vector<SeriesT>&& items, std::vector<Location>&& locations);
 
-  /** Insert or update rescue provided points (generate sql query and execute it).
-  */
-  void upsert_rescue_points(std::unordered_map<ParamId, std::vector<u64> > &&input);
-
-  /**
-   * @brief Update volume descriptors
-   * This function performs partial update (nblocks, capacity, generation) of the stdb_volumes
-   * table.
-   * New volume should be added using the `add_volume` function.
-   */
-  void upsert_volume_records(std::unordered_map<u32, VolumeDesc>&& input);
-
  private:
+  void begin_transaction();
+  void end_transaction();
+
   /** Execute query that doesn't return anything.
    * @throw std::runtime_error in a case of error
    * @return number of rows changed
@@ -171,4 +123,4 @@ struct MetadataStorage : storage::VolumeRegistry {
 
 }  // namespace stdb
 
-#endif  // STDB_CORE_METADATASTORAGE_H_
+#endif  // STDB_CORE_SERVER_META_STORAGE_H_
