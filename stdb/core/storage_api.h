@@ -21,6 +21,7 @@
 #include <memory>
 #include <string>
 
+#include "stdb/common/apr_utils.h"
 #include "stdb/common/basic.h"
 #include "stdb/common/status.h"
 
@@ -121,8 +122,6 @@ class STDBConnection : public DbConnection {
                                            u64 volume_size, bool allocate);
   static common::Status delete_database(const char* file_name, const char* wal_path, bool force);
 };
-
-void initialize();
 
 struct Utility {
   // parse timestamp.

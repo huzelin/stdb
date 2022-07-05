@@ -5,6 +5,7 @@ load("@rules_cc//cc:defs.bzl", "cc_library", "cc_proto_library", "cc_test")
 cc_library(
   name = "common",
   srcs = [
+    "apr_utils.cc",
     "crc32c.cc",
     "datetime.cc",
     "exception.cc",
@@ -17,6 +18,7 @@ cc_library(
     "strutil.cc",
   ],
   hdrs = [
+    "apr_utils.h",
     "basic.h",
     "blocking_queue.h",
     "crc32c.h",
@@ -40,10 +42,13 @@ cc_library(
   copts = [
     "-DBOOST_DATE_TIME_POSIX_TIME_STD_CONFIG",
   ],
+  linkopts = [
+    "-ldl",
+  ],
   deps = [
-    "@sqlite//:libsqlite",
     "@expat//:libexpat",
     "@apr//:libapr",
+    "@sqlite//:libsqlite",
     "@glog",
     "@com_google_protobuf//:protobuf",
     "@robin-map//:librobin-map",

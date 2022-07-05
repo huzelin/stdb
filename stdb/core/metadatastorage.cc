@@ -26,21 +26,6 @@
 
 namespace stdb {
 
-void delete_apr_pool(apr_pool_t *p) {
-  if (p) {
-    apr_pool_destroy(p);
-  }
-}
-
-AprHandleDeleter::AprHandleDeleter(const apr_dbd_driver_t *driver)
-  : driver(driver) { }
-
-void AprHandleDeleter::operator()(apr_dbd_t* handle) {
-  if (driver != nullptr && handle != nullptr) {
-    apr_dbd_close(driver, handle);
-  }
-}
-
 static void callback_adapter(void*, const char* input) {
   std::string msg;
   size_t len_limit = std::min(size_t(0x2000u), msg.max_size());
