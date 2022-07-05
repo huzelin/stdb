@@ -29,12 +29,13 @@
 #include "stdb/common/apr_utils.h"
 #include "stdb/common/basic.h"
 #include "stdb/common/status.h"
+#include "stdb/core/synchronization.h"
 #include "stdb/index/seriesparser.h"
 #include "stdb/storage/volume_registry.h"
 
 namespace stdb {
 
-/** Sqlite3 backed storage for metadata.
+/** Sqlite3 backed storage for worker-side metadata.
  * Metadata includes:
  * - Volumes list
  * - Configuration data
@@ -54,29 +55,22 @@ struct WorkerMetaStorage : storage::VolumeRegistry {
   // PreparedT       insert_;
 
   // Synchronization
-  mutable std::mutex                                sync_lock_;
   mutable std::mutex                                tran_lock_;
-  std::condition_variable                           sync_cvar_;
+
   std::unordered_map<ParamId, std::vector<u64>> pending_rescue_points_;
   std::unordered_map<u32, VolumeDesc>               pending_volumes_;
   std::string                                       db_name_;
+  std::shared_ptr<Synchronization>                 synchronization_;
 
   /** Create new or open existing db.
    * @throw std::runtime_error in a case of error
    */
-  WorkerMetaStorage(const char* db, const char* db_name);
-
-  // Creation //
-
-  /** Create tables if database is empty
-   * @throw std::runtime_error in a case of error
-   */
-  void create_tables();
+  WorkerMetaStorage(const char* db, const char* db_name, std::shared_ptr<Synchronization>& synchronization);
 
   /** Initialize volumes table
    * @throw std::runtime_error in a case of error
    */
-  void init_volumes(std::vector<VolumeDesc> volumes);
+  void init_volumes(const std::vector<VolumeDesc>& volumes);
 
   /** Read list of volumes and their sequence numbers.
    * @throw std::runtime_error in a case of error
@@ -102,14 +96,12 @@ struct WorkerMetaStorage : storage::VolumeRegistry {
   common::Status load_rescue_points(std::unordered_map<u64, std::vector<u64>>& mapping);
 
   // Synchronization
-  void add_rescue_point(ParamId id, std::vector<u64>&& val);
-  common::Status wait_for_sync_request(int timeout_us);
-
   void sync_with_metadata_storage();
+  
+  // add rescue point
+  void add_rescue_point(ParamId id, const std::vector<u64>& val);
 
-  //! Forces `wait_for_sync_request` to return immediately
-  void force_sync();
-
+ private:
   /** Insert or update rescue provided points (generate sql query and execute it).
   */
   void upsert_rescue_points(std::unordered_map<ParamId, std::vector<u64> > &&input);
@@ -122,7 +114,11 @@ struct WorkerMetaStorage : storage::VolumeRegistry {
    */
   void upsert_volume_records(std::unordered_map<u32, VolumeDesc>&& input);
 
- private:
+  /** Create tables if database is empty
+   * @throw std::runtime_error in a case of error
+   */
+  void create_tables();
+
   void begin_transaction();
   void end_transaction();
 

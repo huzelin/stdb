@@ -6,6 +6,7 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 cc_library(
   name = "core",
   srcs = [
+    "worker_meta_storage.cc",
     "server_meta_storage.cc",
     #"stdb.cc",
     "cursor.cc",
@@ -14,6 +15,8 @@ cc_library(
     "storage_api.cc",
   ],
   hdrs = [
+    "synchronization.h",
+    "worker_meta_storage.h",
     "server_meta_storage.h",
     #"stdb.h",
     "cursor.h",
@@ -35,6 +38,16 @@ cc_library(
     "//stdb/query:query",
     "@com_github_boost_thread//:thread",
     "@sqlite//:libsqlite",
+  ],
+)
+
+cc_test(
+  name = "worker_meta_storage_test",
+  srcs = ["worker_meta_storage_test.cc"],
+  deps = [
+    "@gtest//:gtest",
+    "@gtest//:gtest_main",
+    ":core",
   ],
 )
 

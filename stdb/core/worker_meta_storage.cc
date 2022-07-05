@@ -37,11 +37,12 @@ static void callback_adapter(void*, const char* input) {
   LOG(INFO) << msg;
 }
 
-WorkerMetaStorage::WorkerMetaStorage(const char* db, const char* db_name)
+WorkerMetaStorage::WorkerMetaStorage(const char* db, const char* db_name, std::shared_ptr<Synchronization>& synchronization)
     : pool_(nullptr, &delete_apr_pool)
       , driver_(nullptr)
       , handle_(nullptr, AprHandleDeleter(nullptr))
-      , db_name_(db_name) {
+      , db_name_(db_name)
+      , synchronization_(synchronization) {
   apr_pool_t *pool = nullptr;
   auto status = apr_pool_create(&pool, NULL);
   if (status != APR_SUCCESS) {
@@ -99,7 +100,7 @@ void WorkerMetaStorage::create_tables() {
   execute_query(query);
 }
 
-void WorkerMetaStorage::init_volumes(std::vector<VolumeDesc> volumes) {
+void WorkerMetaStorage::init_volumes(const std::vector<VolumeDesc>& volumes) {
   std::stringstream query;
   query << "INSERT INTO stdb_volumes (id, path, version, nblocks, capacity, generation)" << std::endl;
   bool first = true;
@@ -156,7 +157,7 @@ void WorkerMetaStorage::add_volume(const VolumeDesc &vol) {
       + std::to_string(vol.version) + ", "
       + std::to_string(vol.nblocks) + ", "
       + std::to_string(vol.capacity) + ", "
-      + std::to_string(vol.generation) + ");";
+      + std::to_string(vol.generation) + ");\n";
   LOG(INFO) << "Execute query:" << query;
   int rows = execute_query(query);
   if (rows == 0) {
@@ -165,9 +166,9 @@ void WorkerMetaStorage::add_volume(const VolumeDesc &vol) {
 }
 
 void WorkerMetaStorage::update_volume(const VolumeDesc& vol) {
-  std::lock_guard<std::mutex> guard(sync_lock_);
-  pending_volumes_[vol.id] = vol;
-  sync_cvar_.notify_one();
+  synchronization_->signal_action([&]() {
+    pending_volumes_[vol.id] = vol;
+  });
 }
 
 std::string WorkerMetaStorage::get_dbname() {
@@ -215,19 +216,10 @@ common::Status WorkerMetaStorage::load_rescue_points(std::unordered_map<u64, std
   return common::Status::Ok();
 }
 
-void WorkerMetaStorage::add_rescue_point(ParamId id, std::vector<u64>&& val) {
-  std::lock_guard<std::mutex> guard(sync_lock_);
-  pending_rescue_points_[id] = val;
-  sync_cvar_.notify_one();
-}
-
-common::Status WorkerMetaStorage::wait_for_sync_request(int timeout_us) {
-  std::unique_lock<std::mutex> lock(sync_lock_);
-  auto res = sync_cvar_.wait_for(lock, std::chrono::microseconds(timeout_us));
-  if (res == std::cv_status::timeout) {
-    return common::Status::Timeout();
-  }
-  return (pending_rescue_points_.empty() && pending_volumes_.empty()) ? common::Status::Retry() : common::Status::Ok();
+void WorkerMetaStorage::add_rescue_point(ParamId id, const std::vector<u64>& val) {
+  synchronization_->signal_action([&]() {
+    pending_rescue_points_[id] = val;                    
+  });
 }
 
 void WorkerMetaStorage::sync_with_metadata_storage() {
@@ -235,9 +227,10 @@ void WorkerMetaStorage::sync_with_metadata_storage() {
   std::unordered_map<ParamId, std::vector<u64>> rescue_points;
   std::unordered_map<u32, VolumeDesc>               volume_records;
   {
-    std::lock_guard<std::mutex> guard(sync_lock_);
-    std::swap(rescue_points, pending_rescue_points_);
-    std::swap(volume_records, pending_volumes_);
+    synchronization_->lock_action([&]() {
+      std::swap(rescue_points, pending_rescue_points_);
+      std::swap(volume_records, pending_volumes_);
+    });
   }
 
   // This lock is needed to prevent race condition during log replay.
@@ -259,10 +252,6 @@ void WorkerMetaStorage::sync_with_metadata_storage() {
   upsert_volume_records(std::move(volume_records));
 
   end_transaction();
-}
-
-void WorkerMetaStorage::force_sync() {
-  sync_cvar_.notify_one();
 }
 
 void WorkerMetaStorage::upsert_rescue_points(std::unordered_map<ParamId, std::vector<u64>>&& input) {
