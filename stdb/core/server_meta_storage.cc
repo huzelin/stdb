@@ -100,23 +100,30 @@ void ServerMetaStorage::create_tables() {
 }
 
 void ServerMetaStorage::init_config(const char* db_name,
-                                  const char* creation_datetime,
-                                  const char* bstore_type) {
+                                    const char* creation_datetime,
+                                    const char* bstore_type) {
   // Create table and insert data into it
   std::stringstream insert;
   insert << "INSERT INTO stdb_configuration (name, value, comment)" << std::endl;
   insert << "\tVALUES ('creation_datetime', '" << creation_datetime << "', " << "'DB creation time.'), "
       << "('blockstore_type', '" << bstore_type << "', " << "'Type of block storage used.'),"
-#ifdef STDB_VERSION
       << "('storage_version', '" << STDB_VERSION << "', " << "'STDB version used to create the database.'),"
-#endif
       << "('db_name', '" << db_name << "', " << "'Name of DB instance.');"
       << std::endl;
   std::string insert_query = insert.str();
   execute_query(insert_query);
 }
 
-bool ServerMetaStorage::get_config_param(const std::string name, std::string* result) {
+bool ServerMetaStorage::set_config_param(const std::string& param_name, const std::string& value, const std::string& comment) {
+  std::stringstream insert;
+  insert << "INSERT INTO stdb_configuration (name, value, comment)" << std::endl;
+  insert << "\tVALUES ('" << param_name << "', '" << value << "', '" << comment << "');" << std::endl;
+  std::string insert_query = insert.str();
+  auto nrows = execute_query(insert_query);
+  return nrows == 1;
+}
+
+bool ServerMetaStorage::get_config_param(const std::string& name, std::string* result) {
   // Read requested config
   std::stringstream query;
   query << "SELECT value FROM stdb_configuration WHERE name='" << name << "'";
@@ -160,18 +167,27 @@ std::string ServerMetaStorage::get_dbname() {
   std::string dbname;
   bool success = get_config_param("db_name", &dbname);
   if (!success) {
-    LOG(FATAL) << "Configuration parameter 'db_name' is missing";
+    STDB_THROW("Configuration parameter 'db_name' is missing");
   }
   return dbname;
 }
 
-common::Status ServerMetaStorage::wait_for_sync_request(int timeout_us) {
-  std::unique_lock<std::mutex> lock(sync_lock_);
-  auto res = sync_cvar_.wait_for(lock, std::chrono::microseconds(timeout_us));
-  if (res == std::cv_status::timeout) {
-    return common::Status::Timeout();
+std::string ServerMetaStorage::get_creation_datetime() {
+  std::string creation_datetime;
+  bool success = get_config_param("creation_datetime", &creation_datetime);
+  if (!success) {
+    STDB_THROW("Configuration parameter 'creation_datetime' is missing");
   }
-  return common::Status::Retry();
+  return creation_datetime;
+}
+
+std::string ServerMetaStorage::get_bstore_type() {
+  std::string bstore_type;
+  bool success = get_config_param("blockstore_type", &bstore_type);
+  if (!success) {
+    STDB_THROW("Configuration parameter 'blockstore_type' is missing");
+  }
+  return bstore_type;
 }
 
 void ServerMetaStorage::sync_with_metadata_storage(
@@ -197,10 +213,6 @@ void ServerMetaStorage::sync_with_metadata_storage(
   insert_new_series(std::move(newnames), std::move(locations));
 
   end_transaction();
-}
-
-void ServerMetaStorage::force_sync() {
-  sync_cvar_.notify_one();
 }
 
 struct LightweightString {

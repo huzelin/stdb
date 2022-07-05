@@ -9,6 +9,9 @@
 
 namespace stdb {
 
+//! apr initialize
+void initialize();
+
 //! Delete apr pool
 void delete_apr_pool(apr_pool_t* p);
 

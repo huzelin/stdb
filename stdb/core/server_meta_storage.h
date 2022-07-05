@@ -34,7 +34,7 @@
 
 namespace stdb {
 
-/** Sqlite3 backed storage for metadata.
+/** Sqlite3 backed storage for server-side metadata.
  * Metadata includes:
  * - Configuration data
  * - Key to id mapping
@@ -54,19 +54,12 @@ struct ServerMetaStorage {
   PreparedT       insert_;
 
   // Synchronization
-  mutable std::mutex                                sync_lock_;
   mutable std::mutex                                tran_lock_;
-  std::condition_variable                           sync_cvar_;
 
   /** Create new or open existing db.
    * @throw std::runtime_error in a case of error
    */
   ServerMetaStorage(const char* db);
-
-  /** Create tables if database is empty
-   * @throw std::runtime_error in a case of error
-   */
-  void create_tables();
 
   /** Initialize config 
    * @throw std::runtime_error in a case of error
@@ -81,28 +74,34 @@ struct ServerMetaStorage {
    * @param value is a pointer that should receive configuration value
    * @return true on succes, false otherwise
    */
-  bool get_config_param(const std::string param_name, std::string* value);
+  bool get_config_param(const std::string& param_name, std::string* value);
+  bool set_config_param(const std::string& param_name, const std::string& value, const std::string& comment = "");
+
+  // Return the db name
+  std::string get_dbname();
+  // Return the creation datetime
+  std::string get_creation_datetime();
+  // Return the bstore type
+  std::string get_bstore_type();
 
   /** Read larges series id */
   boost::optional<i64> get_prev_largest_id();
 
+  /** load matcher data into SeriesMatcherBase */
   common::Status load_matcher_data(SeriesMatcherBase &matcher);
 
   // Synchronization
-  virtual std::string get_dbname();
-
-  common::Status wait_for_sync_request(int timeout_us);
-
   void sync_with_metadata_storage(std::function<void(std::vector<SeriesT>*, std::vector<Location>*)> pull_new_series);
 
-  //! Forces `wait_for_sync_request` to return immediately
-  void force_sync();
-
-  /** Add new series to the metadata storage (generate sql query and execute it).
-   */
+ private:
+  /** Add new series to the metadata storage (generate sql query and execute it). */
   void insert_new_series(std::vector<SeriesT>&& items, std::vector<Location>&& locations);
 
- private:
+  /** Create tables if database is empty
+   * @throw std::runtime_error in a case of error
+   */
+  void create_tables();
+
   void begin_transaction();
   void end_transaction();
 

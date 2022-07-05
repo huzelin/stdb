@@ -1,5 +1,5 @@
 /**
- * \file metadatastorage.h
+ * \file worker_meta_storage.h
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef STDB_CORE_METADATASTORAGE_H_
-#define STDB_CORE_METADATASTORAGE_H_
+#ifndef STDB_CORE_WORKER_META_STORAGE_H_
+#define STDB_CORE_WORKER_META_STORAGE_H_
 
 #include <cstddef>
 #include <memory>
@@ -40,19 +40,18 @@ namespace stdb {
  * - Configuration data
  * - Key to id mapping
  */
-struct MetadataStorage : storage::VolumeRegistry {
+struct WorkerMetaStorage : storage::VolumeRegistry {
   // Typedefs
   typedef std::unique_ptr<apr_pool_t, decltype(&delete_apr_pool)> PoolT;
   typedef const apr_dbd_driver_t* DriverT;
   typedef std::unique_ptr<apr_dbd_t, AprHandleDeleter> HandleT;
   typedef apr_dbd_prepared_t* PreparedT;
-  typedef PlainSeriesMatcher::SeriesNameT SeriesT;
 
   // Members
   PoolT           pool_;
   DriverT         driver_;
   HandleT         handle_;
-  PreparedT       insert_;
+  // PreparedT       insert_;
 
   // Synchronization
   mutable std::mutex                                sync_lock_;
@@ -60,11 +59,12 @@ struct MetadataStorage : storage::VolumeRegistry {
   std::condition_variable                           sync_cvar_;
   std::unordered_map<ParamId, std::vector<u64>> pending_rescue_points_;
   std::unordered_map<u32, VolumeDesc>               pending_volumes_;
+  std::string                                       db_name_;
 
   /** Create new or open existing db.
    * @throw std::runtime_error in a case of error
    */
-  MetadataStorage(const char* db);
+  WorkerMetaStorage(const char* db, const char* db_name);
 
   // Creation //
 
@@ -78,68 +78,37 @@ struct MetadataStorage : storage::VolumeRegistry {
    */
   void init_volumes(std::vector<VolumeDesc> volumes);
 
-  void init_config(const char* db_name,
-                   const char* creation_datetime,
-                   const char* bstore_type);
-
-  // Retreival //
-
   /** Read list of volumes and their sequence numbers.
    * @throw std::runtime_error in a case of error
    */
-  virtual std::vector<VolumeDesc> get_volumes();
+  virtual std::vector<VolumeDesc> get_volumes() override;
 
   /**
    * @brief Add NEW volume synchroniously
    * @param vol is a volume description
    */
-  virtual void add_volume(const VolumeDesc& vol);
-
-  // TODO: add pending size
-  virtual size_t pending_size() { return pending_volumes_.size(); }
-
-  /**
-   * @brief Get value of the configuration parameter
-   * @param param_name is a name of the configuration parameter
-   * @param value is a pointer that should receive configuration value
-   * @return true on succes, false otherwise
-   */
-  bool get_config_param(const std::string param_name, std::string* value);
-
-  /** Read larges series id */
-  boost::optional<i64> get_prev_largest_id();
-
-  common::Status load_matcher_data(SeriesMatcherBase &matcher);
-
-  common::Status load_rescue_points(std::unordered_map<u64, std::vector<u64>>& mapping);
-
-  // Synchronization
-
-  void add_rescue_point(ParamId id, std::vector<u64>&& val);
+  virtual void add_volume(const VolumeDesc& vol) override;
 
   /**
    * @brief Add/update volume metadata asynchronously
    * @param vol is a volume description
    */
-  virtual void update_volume(const VolumeDesc& vol);
-  virtual std::string get_dbname();
+  virtual void update_volume(const VolumeDesc& vol) override;
 
+  virtual size_t pending_size() override { return pending_volumes_.size(); }
+
+  virtual std::string get_dbname() override;
+
+  common::Status load_rescue_points(std::unordered_map<u64, std::vector<u64>>& mapping);
+
+  // Synchronization
+  void add_rescue_point(ParamId id, std::vector<u64>&& val);
   common::Status wait_for_sync_request(int timeout_us);
 
-  void sync_with_metadata_storage(std::function<void(std::vector<SeriesT>*, std::vector<Location>*)> pull_new_series);
+  void sync_with_metadata_storage();
 
   //! Forces `wait_for_sync_request` to return immediately
   void force_sync();
-
-  // should be private:
-
-  void begin_transaction();
-
-  void end_transaction();
-
-  /** Add new series to the metadata storage (generate sql query and execute it).
-  */
-  void insert_new_series(std::vector<SeriesT>&& items, std::vector<Location>&& locations);
 
   /** Insert or update rescue provided points (generate sql query and execute it).
   */
@@ -154,6 +123,9 @@ struct MetadataStorage : storage::VolumeRegistry {
   void upsert_volume_records(std::unordered_map<u32, VolumeDesc>&& input);
 
  private:
+  void begin_transaction();
+  void end_transaction();
+
   /** Execute query that doesn't return anything.
    * @throw std::runtime_error in a case of error
    * @return number of rows changed
@@ -171,4 +143,4 @@ struct MetadataStorage : storage::VolumeRegistry {
 
 }  // namespace stdb
 
-#endif  // STDB_CORE_METADATASTORAGE_H_
+#endif  // STDB_CORE_WORKER_META_STORAGE_H_

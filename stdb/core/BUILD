@@ -39,6 +39,16 @@ cc_library(
 )
 
 cc_test(
+  name = "server_meta_storage_test",
+  srcs = ["server_meta_storage_test.cc"],
+  deps = [
+    "@gtest//:gtest",
+    "@gtest//:gtest_main",
+    ":core",
+  ],
+)
+
+cc_test(
   name = "metadatastorage_test",
   srcs = ["metadatastorage_test.cc"],
   deps = [

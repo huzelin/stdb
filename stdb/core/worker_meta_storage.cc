@@ -1,5 +1,5 @@
 /**
- * \file metadatastorage.cc
+ * \file worker_meta_storage.cc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  */
-#include "stdb/core/metadatastorage.h"
+#include "stdb/core/worker_meta_storage.h"
 
 #include <sstream>
 
@@ -37,10 +37,11 @@ static void callback_adapter(void*, const char* input) {
   LOG(INFO) << msg;
 }
 
-MetadataStorage::MetadataStorage(const char* db)
+WorkerMetaStorage::WorkerMetaStorage(const char* db, const char* db_name)
     : pool_(nullptr, &delete_apr_pool)
-    , driver_(nullptr)
-    , handle_(nullptr, AprHandleDeleter(nullptr)) {
+      , driver_(nullptr)
+      , handle_(nullptr, AprHandleDeleter(nullptr))
+      , db_name_(db_name) {
   apr_pool_t *pool = nullptr;
   auto status = apr_pool_create(&pool, NULL);
   if (status != APR_SUCCESS) {
@@ -65,74 +66,9 @@ MetadataStorage::MetadataStorage(const char* db)
   sqlite3_trace(static_cast<sqlite3*>(sqlite_handle), callback_adapter, nullptr);
 
   create_tables();
-
-  // Create prepared statement
-  const char* query = "INSERT INTO stdb_series (series_id, keyslist, storage_id, lon, lat) VALUES (%s, %s, %d, %f, %f)";
-  status = apr_dbd_prepare(driver_, pool_.get(), handle_.get(), query, "INSERT_SERIES_NAME", &insert_);
-  if (status != 0) {
-    LOG(ERROR) << "Error creating prepared statement";
-    LOG(FATAL) << apr_dbd_error(driver_, handle_.get(), status);
-  }
 }
 
-void MetadataStorage::sync_with_metadata_storage(
-    std::function<void(std::vector<SeriesT>*, std::vector<Location>*)> pull_new_series) {
-  // Make temporary copies under the lock
-  std::vector<PlainSeriesMatcher::SeriesNameT>           newnames;
-  std::vector<Location>                 locations;
-  std::unordered_map<ParamId, std::vector<u64>> rescue_points;
-  std::unordered_map<u32, VolumeDesc>               volume_records;
-  {
-    std::lock_guard<std::mutex> guard(sync_lock_);
-    std::swap(rescue_points, pending_rescue_points_);
-    std::swap(volume_records, pending_volumes_);
-  }
-  pull_new_series(&newnames, &locations);
-
-  // This lock is needed to prevent race condition during log replay.
-  // When log replay completes, recovery procedure have to start synchronization
-  // from another thread. If previous transaction wasn't finished yet it will
-  // try to spaun another one but sqlite doesn't support nested transaction so
-  // the result will be an error.
-  // The performance shouldn't degrade during normal operation since the mutex
-  // is locked only from a single thread and there is no contention at all.
-  std::unique_lock<std::mutex> lock(tran_lock_);
-
-  // TODO: remove
-  if (handle_.get() == nullptr) {
-    LOG(FATAL) << "handle_ is null";
-  }
-  //:TODO
-
-  // Save new series
-  begin_transaction();
-  insert_new_series(std::move(newnames), std::move(locations));
-
-  // Save rescue points
-  upsert_rescue_points(std::move(rescue_points));
-
-  // Save volume records
-  upsert_volume_records(std::move(volume_records));
-
-  end_transaction();
-}
-
-void MetadataStorage::force_sync() {
-  sync_cvar_.notify_one();
-}
-
-int MetadataStorage::execute_query(std::string query) {
-  int nrows = -1;
-  int status = apr_dbd_query(driver_, handle_.get(), &nrows, query.c_str());
-  if (status != 0 && status != 21) {
-    // generate error and throw
-    LOG(ERROR) << "Error executing query";
-    LOG(FATAL) << apr_dbd_error(driver_, handle_.get(), status);
-  }
-  return nrows;
-}
-
-void MetadataStorage::create_tables() {
+void WorkerMetaStorage::create_tables() {
   const char* query = nullptr;
 
   // Create volumes table
@@ -145,26 +81,6 @@ void MetadataStorage::create_tables() {
       "nblocks INTEGER,"
       "capacity INTEGER,"
       "generation INTEGER"
-      ");";
-  execute_query(query);
-
-  // Create configuration table (key-value-commmentary)
-  query =
-      "CREATE TABLE IF NOT EXISTS stdb_configuration("
-      "name TEXT UNIQUE,"
-      "value TEXT,"
-      "comment TEXT"
-      ");";
-  execute_query(query);
-
-  query =
-      "CREATE TABLE IF NOT EXISTS stdb_series("
-      "id INTEGER PRIMARY KEY UNIQUE,"
-      "series_id TEXT,"
-      "keyslist TEXT,"
-      "storage_id INTEGER UNIQUE,"
-      "lon REAL,"
-      "lat REAL"
       ");";
   execute_query(query);
 
@@ -183,42 +99,7 @@ void MetadataStorage::create_tables() {
   execute_query(query);
 }
 
-void MetadataStorage::init_config(const char* db_name,
-                                  const char* creation_datetime,
-                                  const char* bstore_type) {
-  // Create table and insert data into it
-  std::stringstream insert;
-  insert << "INSERT INTO stdb_configuration (name, value, comment)" << std::endl;
-  insert << "\tVALUES ('creation_datetime', '" << creation_datetime << "', " << "'DB creation time.'), "
-      << "('blockstore_type', '" << bstore_type << "', " << "'Type of block storage used.'),"
-#ifdef STDB_VERSION
-      << "('storage_version', '" << STDB_VERSION << "', " << "'STDB version used to create the database.'),"
-#endif
-      << "('db_name', '" << db_name << "', " << "'Name of DB instance.');"
-      << std::endl;
-  std::string insert_query = insert.str();
-  execute_query(insert_query);
-}
-
-bool MetadataStorage::get_config_param(const std::string name, std::string* result) {
-  // Read requested config
-  std::stringstream query;
-  query << "SELECT value FROM stdb_configuration WHERE name='" << name << "'";
-  auto results = select_query(query.str().c_str());
-  if (results.size() != 1) {
-    LOG(INFO) << "Can't find configuration parameter `" + name + "`";
-    return false;
-  }
-  auto tuple = results.at(0);
-  if (tuple.size() != 1) {
-    LOG(FATAL) << "Invalid configuration query (" + name + ")";
-  }
-  // This value can be encoded as dobule by the sqlite engine
-  *result = tuple.at(0);
-  return true;
-}
-
-void MetadataStorage::init_volumes(std::vector<VolumeDesc> volumes) {
+void WorkerMetaStorage::init_volumes(std::vector<VolumeDesc> volumes) {
   std::stringstream query;
   query << "INSERT INTO stdb_volumes (id, path, version, nblocks, capacity, generation)" << std::endl;
   bool first = true;
@@ -248,40 +129,7 @@ void MetadataStorage::init_volumes(std::vector<VolumeDesc> volumes) {
   execute_query(full_query);
 }
 
-
-std::vector<MetadataStorage::UntypedTuple> MetadataStorage::select_query(const char* query) const {
-  std::vector<UntypedTuple> tuples;
-  apr_dbd_results_t *results = nullptr;
-  int status = apr_dbd_select(driver_, pool_.get(), handle_.get(), &results, query, 0);
-  if (status != 0) {
-    LOG(ERROR) << "Error executing query";
-    LOG(FATAL) << apr_dbd_error(driver_, handle_.get(), status);
-  }
-  // get rows
-  int ntuples = apr_dbd_num_tuples(driver_, results);
-  int ncolumns = apr_dbd_num_cols(driver_, results);
-  for (int i = ntuples; i --> 0;) {
-    apr_dbd_row_t *row = nullptr;
-    status = apr_dbd_get_row(driver_, pool_.get(), results, &row, -1);
-    if (status != 0) {
-      LOG(ERROR) << "Error getting row from resultset";
-      LOG(FATAL) << apr_dbd_error(driver_, handle_.get(), status);
-    }
-    UntypedTuple tup;
-    for (int col = 0; col < ncolumns; col++) {
-      const char* entry = apr_dbd_get_entry(driver_, row, col);
-      if (entry) {
-        tup.emplace_back(entry);
-      } else {
-        tup.emplace_back();
-      }
-    }
-    tuples.push_back(std::move(tup));
-  }
-  return tuples;
-}
-
-std::vector<MetadataStorage::VolumeDesc> MetadataStorage::get_volumes() {
+std::vector<WorkerMetaStorage::VolumeDesc> WorkerMetaStorage::get_volumes() {
   const char* query =
       "SELECT id, path, version, nblocks, capacity, generation FROM stdb_volumes;";
   std::vector<VolumeDesc> tuples;
@@ -301,7 +149,7 @@ std::vector<MetadataStorage::VolumeDesc> MetadataStorage::get_volumes() {
   return tuples;
 }
 
-void MetadataStorage::add_volume(const VolumeDesc &vol) {
+void WorkerMetaStorage::add_volume(const VolumeDesc &vol) {
   std::string query =
       "INSERT INTO stdb_volumes (id, path, version, nblocks, capacity, generation) VALUES ";
   query += "(" + std::to_string(vol.id) + ", \"" + vol.path + "\", "
@@ -316,43 +164,64 @@ void MetadataStorage::add_volume(const VolumeDesc &vol) {
   }
 }
 
-struct LightweightString {
-  const char* str;
-  int len;
-};
-
-std::ostream& operator << (std::ostream& s, LightweightString val) {
-  s.write(val.str, val.len);
-  return s;
+void WorkerMetaStorage::update_volume(const VolumeDesc& vol) {
+  std::lock_guard<std::mutex> guard(sync_lock_);
+  pending_volumes_[vol.id] = vol;
+  sync_cvar_.notify_one();
 }
 
-static bool split_series(const char* str, int n, LightweightString* outname, LightweightString* outkeys) {
-  int len = 0;
-  while(len < n && str[len] != ' ' && str[len] != '\t') {
-    len++;
-  }
-  if (len >= n) {
-    // Error
-    return false;
-  }
-  outname->str = str;
-  outname->len = len;
-  // Skip space
-  auto end = str + n;
-  str = str + len;
-  while (str < end && (*str == ' ' || *str == '\t')) {
-    str++;
-  }
-  if (str == end) {
-    // Error (no keys present)
-    return false;
-  }
-  outkeys->str = str;
-  outkeys->len = end - str;
-  return true;
+std::string WorkerMetaStorage::get_dbname() {
+  return db_name_;
 }
 
-common::Status MetadataStorage::wait_for_sync_request(int timeout_us) {
+common::Status WorkerMetaStorage::load_rescue_points(std::unordered_map<u64, std::vector<u64>>& mapping) {
+  auto query =
+      "SELECT storage_id, addr0, addr1, addr2, addr3,"
+      " addr4, addr5, addr6, addr7 "
+      "FROM stdb_rescue_points;";
+  try {
+    auto results = select_query(query);
+    for (auto row: results) {
+      if (row.size() != 9) {
+        continue;
+      }
+      auto series_id = boost::lexical_cast<u64>(row.at(0));
+      if (errno == ERANGE) {
+        LOG(ERROR) << "Can't parse series id, database corrupted";
+        return common::Status::BadData();
+      }
+      std::vector<u64> addrlist;
+      for (size_t i = 0; i < 8; i++) {
+        auto addr = row.at(1 + i);
+        if (addr.empty()) {
+          break;
+        } else {
+          u64 uaddr;
+          i64 iaddr = boost::lexical_cast<i64>(addr);
+          if (iaddr < 0) {
+            uaddr = ~0ull;
+          } else {
+            uaddr = static_cast<u64>(iaddr);
+          }
+          addrlist.push_back(uaddr);
+        }
+      }
+      mapping[series_id] = std::move(addrlist);
+    }
+  } catch(...) {
+    LOG(ERROR) << boost::current_exception_diagnostic_information().c_str();
+    return common::Status::General();
+  }
+  return common::Status::Ok();
+}
+
+void WorkerMetaStorage::add_rescue_point(ParamId id, std::vector<u64>&& val) {
+  std::lock_guard<std::mutex> guard(sync_lock_);
+  pending_rescue_points_[id] = val;
+  sync_cvar_.notify_one();
+}
+
+common::Status WorkerMetaStorage::wait_for_sync_request(int timeout_us) {
   std::unique_lock<std::mutex> lock(sync_lock_);
   auto res = sync_cvar_.wait_for(lock, std::chrono::microseconds(timeout_us));
   if (res == std::cv_status::timeout) {
@@ -361,70 +230,42 @@ common::Status MetadataStorage::wait_for_sync_request(int timeout_us) {
   return (pending_rescue_points_.empty() && pending_volumes_.empty()) ? common::Status::Retry() : common::Status::Ok();
 }
 
-void MetadataStorage::add_rescue_point(ParamId id, std::vector<u64>&& val) {
-  std::lock_guard<std::mutex> guard(sync_lock_);
-  pending_rescue_points_[id] = val;
+void WorkerMetaStorage::sync_with_metadata_storage() {
+  // Make temporary copies under the lock
+  std::unordered_map<ParamId, std::vector<u64>> rescue_points;
+  std::unordered_map<u32, VolumeDesc>               volume_records;
+  {
+    std::lock_guard<std::mutex> guard(sync_lock_);
+    std::swap(rescue_points, pending_rescue_points_);
+    std::swap(volume_records, pending_volumes_);
+  }
+
+  // This lock is needed to prevent race condition during log replay.
+  // When log replay completes, recovery procedure have to start synchronization
+  // from another thread. If previous transaction wasn't finished yet it will
+  // try to spaun another one but sqlite doesn't support nested transaction so
+  // the result will be an error.
+  // The performance shouldn't degrade during normal operation since the mutex
+  // is locked only from a single thread and there is no contention at all.
+  std::unique_lock<std::mutex> lock(tran_lock_);
+
+  // Save new series
+  begin_transaction();
+
+  // Save rescue points
+  upsert_rescue_points(std::move(rescue_points));
+
+  // Save volume records
+  upsert_volume_records(std::move(volume_records));
+
+  end_transaction();
+}
+
+void WorkerMetaStorage::force_sync() {
   sync_cvar_.notify_one();
 }
 
-void MetadataStorage::update_volume(const VolumeDesc& vol) {
-  std::lock_guard<std::mutex> guard(sync_lock_);
-  pending_volumes_[vol.id] = vol;
-  sync_cvar_.notify_one();
-}
-
-std::string MetadataStorage::get_dbname() {
-  std::string dbname;
-  bool success = get_config_param("db_name", &dbname);
-  if (!success) {
-    LOG(FATAL) << "Configuration parameter 'db_name' is missing";
-  }
-  return dbname;
-}
-
-void MetadataStorage::begin_transaction() {
-  execute_query("BEGIN TRANSACTION;");
-}
-
-void MetadataStorage::end_transaction() {
-  execute_query("END TRANSACTION;");
-}
-
-void MetadataStorage::upsert_volume_records(std::unordered_map<u32, VolumeDesc>&& input) {
-  if (input.empty()) {
-    return;
-  }
-  std::stringstream query;
-  std::vector<VolumeDesc> items;
-  for (const auto& kv: input) {
-    items.push_back(kv.second);
-  }
-  while (!items.empty()) {
-    const size_t batchsize = 500;  // This limit is defined by SQLITE_MAX_COMPOUND_SELECT
-    const size_t newsize = items.size() > batchsize ? items.size() - batchsize : 0;
-    std::vector<VolumeDesc> batch(items.begin() + static_cast<ssize_t>(newsize), items.end());
-    items.resize(newsize);
-    query << "INSERT OR REPLACE INTO stdb_volumes (id, path, version, nblocks, capacity, generation) VALUES ";
-    size_t ix = 0;
-    for (auto const& vol: batch) {
-      query << "(" << std::to_string(vol.id)         << ", '"
-          << vol.path                       << "', "
-          << std::to_string(vol.version)    << ", "
-          << std::to_string(vol.nblocks)    << ", "
-          << std::to_string(vol.capacity)   << ", "
-          << std::to_string(vol.generation) << ")";
-      ix++;
-      if (ix == batch.size()) {
-        query << ";\n";
-      } else {
-        query << ",";
-      }
-    }
-  }
-  execute_query(query.str());
-}
-
-void MetadataStorage::upsert_rescue_points(std::unordered_map<ParamId, std::vector<u64>>&& input) {
+void WorkerMetaStorage::upsert_rescue_points(std::unordered_map<ParamId, std::vector<u64>>&& input) {
   if (input.empty()) {
     return;
   }
@@ -464,139 +305,89 @@ void MetadataStorage::upsert_rescue_points(std::unordered_map<ParamId, std::vect
   execute_query(query.str());
 }
 
-void MetadataStorage::insert_new_series(std::vector<SeriesT> &&items, std::vector<Location>&& locations) {
-  if (items.size() == 0) {
+void WorkerMetaStorage::upsert_volume_records(std::unordered_map<u32, VolumeDesc>&& input) {
+  if (input.empty()) {
     return;
   }
-  // Write all data
   std::stringstream query;
+  std::vector<VolumeDesc> items;
+  for (const auto& kv: input) {
+    items.push_back(kv.second);
+  }
   while (!items.empty()) {
-    const size_t batchsize = 500; // This limit is defined by SQLITE_MAX_COMPOUND_SELECT
+    const size_t batchsize = 500;  // This limit is defined by SQLITE_MAX_COMPOUND_SELECT
     const size_t newsize = items.size() > batchsize ? items.size() - batchsize : 0;
-    std::vector<MetadataStorage::SeriesT> batch(items.begin() + static_cast<ssize_t>(newsize), items.end());
+    std::vector<VolumeDesc> batch(items.begin() + static_cast<ssize_t>(newsize), items.end());
     items.resize(newsize);
-
-    const size_t location_newsize = locations.size() > batchsize ? locations.size() - batchsize : 0;
-    std::vector<Location> batch_location(locations.begin() + static_cast<ssize_t>(location_newsize), locations.end());
-    locations.resize(location_newsize);
-
-    query << "INSERT INTO stdb_series (series_id, keyslist, storage_id, lon, lat)" << std::endl;
-    bool first = true;
-    for (size_t i = 0; i < batch.size(); ++i) {
-      auto& item = batch[i];
-      LightweightString name, keys;
-      auto lon = i < batch_location.size() ? batch_location[i].lon : 0.0;
-      auto lat = i < batch_location.size() ? batch_location[i].lat : 0.0;
-      auto stid = std::get<2>(item);
-      if (split_series(std::get<0>(item), std::get<1>(item), &name, &keys)) {
-        if (first) {
-          query << "\tSELECT '" << name << "' as series_id, '"
-              << keys << "' as keyslist, "
-              << stid << "  as storage_id, "
-              << lon << " as lon, "
-              << lat << " as lat"
-              << std::endl;
-          first = false;
-        } else {
-          query << "\tUNION "
-              <<   "SELECT '" << name << "', '"
-              << keys << "', "
-              << stid << ", "
-              << lon << ", "
-              << lat
-              << std::endl;
-        }
+    query << "INSERT OR REPLACE INTO stdb_volumes (id, path, version, nblocks, capacity, generation) VALUES ";
+    size_t ix = 0;
+    for (auto const& vol: batch) {
+      query << "(" << std::to_string(vol.id)         << ", '"
+          << vol.path                       << "', "
+          << std::to_string(vol.version)    << ", "
+          << std::to_string(vol.nblocks)    << ", "
+          << std::to_string(vol.capacity)   << ", "
+          << std::to_string(vol.generation) << ")";
+      ix++;
+      if (ix == batch.size()) {
+        query << ";\n";
+      } else {
+        query << ",";
       }
     }
-    query << ";\n";
   }
-  std::string full_query = query.str();
-  execute_query(full_query);
+  execute_query(query.str());
 }
 
-boost::optional<i64> MetadataStorage::get_prev_largest_id() {
-  auto query_max = "SELECT max(abs(storage_id)) FROM stdb_series;";
-  i64 max_id = 0;
-  try {
-    auto results = select_query(query_max);
-    auto row = results.at(0);
-    if (row.empty()) {
-      LOG(FATAL) << "Can't get max storage id";
-    }
-    auto id = row.at(0);
-    if (id == "") {
-      // Table is empty
-      return boost::optional<i64>();
-    }
-    max_id = boost::lexical_cast<i64>(id);
-  } catch(...) {
-    LOG(ERROR) << boost::current_exception_diagnostic_information().c_str();
-    LOG(FATAL) << "Can't get max storage id";
-  }
-  return max_id;
+void WorkerMetaStorage::begin_transaction() {
+  execute_query("BEGIN TRANSACTION;");
 }
 
-common::Status MetadataStorage::load_matcher_data(SeriesMatcherBase& matcher) {
-  auto query = "SELECT series_id || ' ' || keyslist, storage_id, lon, lat FROM stdb_series;";
-  try {
-    auto results = select_query(query);
-    for(auto row: results) {
-      if (row.size() != 2) {
-        continue;
-      }
-      auto series = row.at(0);
-      auto id = boost::lexical_cast<i64>(row.at(1));
-      Location location;
-      location.lon = boost::lexical_cast<LocationType>(row.at(2));
-      location.lat = boost::lexical_cast<LocationType>(row.at(3));
-      matcher._add(series, id, location);
-    }
-  } catch(...) {
-    LOG(ERROR) << boost::current_exception_diagnostic_information().c_str();
-    return common::Status::General();
-  }
-  return common::Status::Ok();
+void WorkerMetaStorage::end_transaction() {
+  execute_query("END TRANSACTION;");
 }
 
-common::Status MetadataStorage::load_rescue_points(std::unordered_map<u64, std::vector<u64>>& mapping) {
-  auto query =
-      "SELECT storage_id, addr0, addr1, addr2, addr3,"
-      " addr4, addr5, addr6, addr7 "
-      "FROM stdb_rescue_points;";
-  try {
-    auto results = select_query(query);
-    for(auto row: results) {
-      if (row.size() != 9) {
-        continue;
-      }
-      auto series_id = boost::lexical_cast<u64>(row.at(0));
-      if (errno == ERANGE) {
-        LOG(ERROR) << "Can't parse series id, database corrupted";
-        return common::Status::BadData();
-      }
-      std::vector<u64> addrlist;
-      for (size_t i = 0; i < 8; i++) {
-        auto addr = row.at(1 + i);
-        if (addr.empty()) {
-          break;
-        } else {
-          u64 uaddr;
-          i64 iaddr = boost::lexical_cast<i64>(addr);
-          if (iaddr < 0) {
-            uaddr = ~0ull;
-          } else {
-            uaddr = static_cast<u64>(iaddr);
-          }
-          addrlist.push_back(uaddr);
-        }
-      }
-      mapping[series_id] = std::move(addrlist);
-    }
-  } catch(...) {
-    LOG(ERROR) << boost::current_exception_diagnostic_information().c_str();
-    return common::Status::General();
+int WorkerMetaStorage::execute_query(std::string query) {
+  int nrows = -1;
+  int status = apr_dbd_query(driver_, handle_.get(), &nrows, query.c_str());
+  if (status != 0 && status != 21) {
+    // generate error and throw
+    LOG(ERROR) << "Error executing query";
+    LOG(FATAL) << apr_dbd_error(driver_, handle_.get(), status);
   }
-  return common::Status::Ok();
+  return nrows;
 }
 
+std::vector<WorkerMetaStorage::UntypedTuple> WorkerMetaStorage::select_query(const char* query) const {
+  std::vector<UntypedTuple> tuples;
+  apr_dbd_results_t *results = nullptr;
+  int status = apr_dbd_select(driver_, pool_.get(), handle_.get(), &results, query, 0);
+  if (status != 0) {
+    LOG(ERROR) << "Error executing query";
+    LOG(FATAL) << apr_dbd_error(driver_, handle_.get(), status);
+  }
+  // get rows
+  int ntuples = apr_dbd_num_tuples(driver_, results);
+  int ncolumns = apr_dbd_num_cols(driver_, results);
+  for (int i = ntuples; i --> 0;) {
+    apr_dbd_row_t *row = nullptr;
+    status = apr_dbd_get_row(driver_, pool_.get(), results, &row, -1);
+    if (status != 0) {
+      LOG(ERROR) << "Error getting row from resultset";
+      LOG(FATAL) << apr_dbd_error(driver_, handle_.get(), status);
+    }
+    UntypedTuple tup;
+    for (int col = 0; col < ncolumns; col++) {
+      const char* entry = apr_dbd_get_entry(driver_, row, col);
+      if (entry) {
+        tup.emplace_back(entry);
+      } else {
+        tup.emplace_back();
+      }
+    }
+    tuples.push_back(std::move(tup));
+  }
+  return tuples;
+}
+    
 }  // namespace stdb
