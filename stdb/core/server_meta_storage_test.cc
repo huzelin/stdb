@@ -54,7 +54,10 @@ TEST(TestServerMetaStorage, Test2) {
 }
 
 TEST(TestServerMetaStorage, Test3) {
-
+  ServerMetaStorage storage("/tmp/test_server_meta_storage.sqlite");
+  PlainSeriesMatcher plain_series_matcher;
+  auto status = storage.load_matcher_data(plain_series_matcher);
+  EXPECT_TRUE(status.IsOk());
 }
 
 }  // namespace stdb
