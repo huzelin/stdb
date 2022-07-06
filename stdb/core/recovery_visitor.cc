@@ -3,16 +3,60 @@
  */
 #include "stdb/core/recovery_visitor.h"
 
-#include "stdb/core/database.h"
+#include "stdb/core/server_database.h"
+#include "stdb/core/worker_database.h"
 
 namespace stdb {
 
-bool RecoveryVisitor::operator()(const storage::InputLogDataPoint& point) {
+bool ServerRecoveryVisitor::operator()(const storage::InputLogSeriesName& sname) {
+  auto strref = server_database->global_matcher()->id2str(curr_id);
+  if (strref.second) {
+    // Fast path, name already added
+    return true;
+  }
+  bool create_new = false;
+  auto begin = sname.value.data();
+  auto end = begin + sname.value.length();
+  auto id = server_database->global_matcher()->match(begin, end);
+  if (id == 0) {
+    // create new series
+    id = curr_id;
+    StringT prev = server_database->global_matcher()->id2str(id);
+    if (prev.second != 0) {
+      // sample.paramid maps to some other series
+      LOG(ERROR) << "Series id conflict. Id " << id
+          << " is already taken by " << std::string(prev.first, prev.first + prev.second)
+          << ". Series name " << sname.value << " is skipped.";
+      return true;
+    }
+    server_database->global_matcher()->_add(sname.value, id);
+    create_new = true;
+  }
+  if (create_new) {
+    server_database->recovery_create_new_column(id);
+    restored_ids->push_back(id);
+  }
+  return true;
+}
+
+bool ServerRecoveryVisitor::operator()(const storage::InputLogDataPoint& point) {
+  return false;
+}
+
+bool ServerRecoveryVisitor::operator()(const storage::InputLogRecoveryInfo& rinfo) {
+  return false;
+}
+
+bool WorkerRecoveryVisitor::operator()(const storage::InputLogSeriesName& sname) {
+  return false;
+}
+
+bool WorkerRecoveryVisitor::operator()(const storage::InputLogDataPoint& point) {
   sample.timestamp        = point.timestamp;
   sample.payload.float64  = point.value;
   sample.payload.size     = sizeof(Sample);
   sample.payload.type     = PAYLOAD_FLOAT;
-  auto result = worker_database_->recovery_write(sample, updated_ids.count(sample.paramid));
+  auto result = worker_database->recovery_write(sample, updated_ids.count(sample.paramid));
 
   switch (result) {
     case storage::NBTreeAppendResult::FAIL_BAD_VALUE: {
@@ -36,38 +80,7 @@ bool RecoveryVisitor::operator()(const storage::InputLogDataPoint& point) {
   return true;
 }
 
-bool RecoveryVistor::operator()(const storage::InputLogSeriesName& sname) {
-  auto strref = database_->global_matcher().id2str(curr_id);
-  if (strref.second) {
-    // Fast path, name already added
-    return true;
-  }
-  bool create_new = false;
-  auto begin = sname.value.data();
-  auto end = begin + sname.value.length();
-  auto id = database_->global_matcher().match(begin, end);
-  if (id == 0) {
-    // create new series
-    id = curr_id;
-    StringT prev = database_->global_matcher().id2str(id);
-    if (prev.second != 0) {
-      // sample.paramid maps to some other series
-      LOG(ERROR) << "Series id conflict. Id " << id
-          << " is already taken by " << std::string(prev.first, prev.first + prev.second)
-          << ". Series name " << sname.value << " is skipped.";
-      return true;
-    }
-    database_->global_matcher()._add(sname.value, id);
-    create_new = true;
-  }
-  if (create_new) {
-    database_->recovery_create_name_column(id);
-    restored_ids->push_back(id);
-  }
-  return true;
-}
-
-bool RecoveryVisitor::operator()(const storage::InputLogRecoveryInfo& rinfo) {
+bool WorkerRecoveryVisitor::operator()(const storage::InputLogRecoveryInfo& rinfo) {
   std::vector<storage::LogicAddr> rpoints(rinfo.data);
   auto it = mapping->find(curr_id);
   if (it != mapping->end()) {
@@ -90,7 +103,8 @@ bool RecoveryVisitor::operator()(const storage::InputLogRecoveryInfo& rinfo) {
     }
   }
   (*mapping)[curr_id] = rpoints;
-  database_->recovery_update_rescue_points(curr_id, std::move(rpoints));
+  worker_database->recovery_update_rescue_points(curr_id, std::move(rpoints));
+  return true;
 }
 
 }  // namespace stdb

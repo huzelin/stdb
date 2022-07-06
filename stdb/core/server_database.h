@@ -2,8 +2,7 @@
  * \file server_database.h
  */
 #include "stdb/core/database.h"
-#include "stdb/core/server_meta_storage.h"
-#include "stdb/index/seriesparser.h"
+#include "stdb/metastorage/server_meta_storage.h"
 #include "stdb/query/queryprocessor_framework.h"
 
 namespace stdb {
@@ -19,7 +18,7 @@ class ServerDatabase : public Database {
   ServerDatabase();
 
   // Open meta database.
-  ServerStorage(const char* path, const FineTuneParams &params);
+  ServerDatabase(const char* path, const FineTuneParams &params, Database* parent = nullptr);
 
   // Init series id, if return true, a new id created, else return false.
   bool init_series_id(const char* begin, const char* end, Sample* sample, PlainSeriesMatcher* local_matcher,
@@ -32,14 +31,37 @@ class ServerDatabase : public Database {
   void trigger_meta_sync();
 
   // Return global matcher
-  SeriesMatcher& global_matcher() { return global_matcher_; }
+  SeriesMatcher* global_matcher() override { return &global_matcher_; }
+
+  // Close.
+  void close() override;
+  // Sync.
+  void sync() override;
+
+  // Create empty database from scratch.
+  // @param base_file_name is database name (excl suffix)
+  // @param metadata_path is a path to metadata storage
+  // @param bstore_type is the bstore type.
+  // @return operation status
+  static common::Status new_database(const char* base_file_name, const char* metadata_path, const char* bstore_type);
+
+  // Remove existing database
+  // @param file_name is a database name
+  // @param wal_path wal path 
+  // @return SUCCESS on success or EACCESS if database there is not enough priveleges to
+  // delete the files
+  static common::Status remove_database(const char* file_name, const char* wal_path);
 
  protected:
   // write wal
   void write_wal(storage::InputLog* ilog, ParamId id, const char* begin, u32 size, SessionWaiter* session_waiter);
 
   // run recovery
-  void run_recovery(const FineTuneParams &params);
+  void run_recovery(const FineTuneParams &params, Database* database);
+  void run_inputlog_metadata_recovery(
+      storage::ShardedInputLog* ilog,
+      std::vector<ParamId>* restored_ids,
+      Database* database);
 };
 
 }  // namespace stdb

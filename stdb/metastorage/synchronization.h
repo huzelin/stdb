@@ -1,8 +1,8 @@
 /*!
  * \file synchronization.h
  */
-#ifndef STDB_CORE_SYNCHRONIZATION_H_
-#define STDB_CORE_SYNCHRONIZATION_H_
+#ifndef STDB_METASTORAGE_SYNCHRONIZATION_H_
+#define STDB_METASTORAGE_SYNCHRONIZATION_H_
 
 #include <functional>
 #include <mutex>
@@ -46,4 +46,4 @@ class Synchronization {
 
 }  // namespace stdb
 
-#endif  // STDB_CORE_SYNCHRONIZATION_H_
+#endif  // STDB_METASTORAGE_SYNCHRONIZATION_H_

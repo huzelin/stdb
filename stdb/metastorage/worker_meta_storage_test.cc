@@ -1,7 +1,7 @@
 /*!
  * \file worker_meta_storage_test.cc
  */
-#include "stdb/core/worker_meta_storage.h"
+#include "stdb/metastorage/worker_meta_storage.h"
 
 #include "gtest/gtest.h"
 
@@ -15,7 +15,8 @@ TEST(TestWorkerMetaStorage, Test1) {
 
   common::RemoveFile("/tmp/test_worker_meta_storage.sqlite");
   std::shared_ptr<Synchronization> synchronization(new Synchronization());
-  WorkerMetaStorage storage("/tmp/test_worker_meta_storage.sqlite", "db1", synchronization);
+  WorkerMetaStorage storage("/tmp/test_worker_meta_storage.sqlite", synchronization);
+  storage.init_config("db1", "2022.08.01", "FixedMemory");
 
   WorkerMetaStorage::VolumeDesc volume_desc;
   for (auto i = 0; i < 1024; ++i) {
@@ -40,7 +41,7 @@ TEST(TestWorkerMetaStorage, Test1) {
 
 TEST(TestWorkerMetaStorage, Test2) {
   std::shared_ptr<Synchronization> synchronization(new Synchronization());
-  WorkerMetaStorage storage("/tmp/test_worker_meta_storage.sqlite", "db1", synchronization);
+  WorkerMetaStorage storage("/tmp/test_worker_meta_storage.sqlite", synchronization);
 
   WorkerMetaStorage::VolumeDesc volume_desc;
 
@@ -65,7 +66,7 @@ TEST(TestWorkerMetaStorage, Test2) {
 
 TEST(TestWorkerMetaStorage, Test3) {
   std::shared_ptr<Synchronization> synchronization(new Synchronization());
-  WorkerMetaStorage storage("/tmp/test_worker_meta_storage.sqlite", "db1", synchronization);
+  WorkerMetaStorage storage("/tmp/test_worker_meta_storage.sqlite", synchronization);
 
   std::vector<u64> recue_points;
   recue_points.emplace_back(23);
