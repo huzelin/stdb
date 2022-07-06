@@ -6,8 +6,14 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 cc_library(
   name = "core",
   srcs = [
-    "worker_meta_storage.cc",
-    "server_meta_storage.cc",
+    "controller.cc",
+    "database.cc",
+    "recovery_visitor.cc",
+    "server_database.cc",
+    "worker_database.cc",
+    "standalone_database.cc",
+    "standalone_database_session.cc",
+
     #"stdb.cc",
     "cursor.cc",
     "metadatastorage.cc",
@@ -15,9 +21,16 @@ cc_library(
     "storage_api.cc",
   ],
   hdrs = [
-    "synchronization.h",
-    "worker_meta_storage.h",
-    "server_meta_storage.h",
+    "controller.h",
+    "database.h",
+    "database_session.h",
+    "recovery_visitor.h",
+    "server_database.h",
+    "worker_database.h",
+    "standalone_database.h",
+    "standalone_database_session.h",
+    "session_waiter.h",
+
     #"stdb.h",
     "cursor.h",
     "metadatastorage.h",
@@ -36,28 +49,9 @@ cc_library(
     "//stdb/storage:storage",
     "//stdb/index:index",
     "//stdb/query:query",
+    "//stdb/metastorage:metastorage",
     "@com_github_boost_thread//:thread",
     "@sqlite//:libsqlite",
-  ],
-)
-
-cc_test(
-  name = "worker_meta_storage_test",
-  srcs = ["worker_meta_storage_test.cc"],
-  deps = [
-    "@gtest//:gtest",
-    "@gtest//:gtest_main",
-    ":core",
-  ],
-)
-
-cc_test(
-  name = "server_meta_storage_test",
-  srcs = ["server_meta_storage_test.cc"],
-  deps = [
-    "@gtest//:gtest",
-    "@gtest//:gtest_main",
-    ":core",
   ],
 )
 
@@ -81,12 +75,22 @@ cc_test(
   ],
 )
 
-#cc_test(
-#  name = "stdb_test",
-#  srcs = ["stdb_test.cc"],
-#  deps = [
-#    "@gtest//:gtest",
-#    "@gtest//:gtest_main",
-#    ":core",
-#  ],
-#)
+cc_test(
+  name = "standalone_database_test",
+  srcs = ["standalone_database_test.cc"],
+  deps = [
+    "@gtest//:gtest",
+    "@gtest//:gtest_main",
+    ":core",
+  ],
+)
+
+cc_test(
+  name = "controller_test",
+  srcs = ["controller_test.cc"],
+  deps = [
+    "@gtest//:gtest",
+    "@gtest//:gtest_main",
+    ":core",
+  ],
+)

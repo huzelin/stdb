@@ -4,43 +4,60 @@
 #ifndef STDB_CORE_DATABASE_H_
 #define STDB_CORE_DATABASE_H_
 
+#include <memory>
+#include <future>
+
 #include "stdb/common/basic.h"
+#include "stdb/core/database_session.h"
+#include "stdb/core/session_waiter.h"
+#include "stdb/index/seriesparser.h"
 #include "stdb/storage/input_log.h"
+#include "stdb/storage/nbtree.h"
+#include "stdb/storage/volume.h"
 
 namespace stdb {
 
-struct SessionWaiter {
-  std::vector<std::promise<void>> sessions_await_list;
-  std::mutex session_lock;
-
-  void add_sync_barrier(std::promise<void>&& barrier) {
-    std::lock_guard<std::mutex> lock(session_lock);
-    sessions_wait_list.push_back(std::move(barrier));
-  }
-
-  void notify_all() {
-    std::lock_guard<std::mutex> lck(session_lock);
-    for (auto& it : session_await_list) {
-      it.set_value();
-    }
-    session_await_list.clear();
-  }
-};
+// InputLog visitor will call database's callback
+class ServerRecoveryVisitor;
+class WorkerRecoveryVisitor;
 
 class Database {
  protected:
   std::shared_ptr<storage::ShardedInputLog> inputlog_;
   std::string input_log_path_;
 
-  // Initialize input log
-  void initialize_input_log(const FineTuneParams& params);
-
-  // Whether run recover is enabled.
-  bool run_recovery_is_enabled(const FineTuneParams &params);
+  // Whether wal recover is enabled.
+  bool wal_recovery_is_enabled(const FineTuneParams &params, int* ccr);
 
   // Get current input log
   storage::InputLog* get_input_log();
 
+ public:
+  friend class ServerRecoveryVisitor;
+  friend class WorkerRecoveryVisitor;
+
+  // set input log
+  void set_input_log(std::shared_ptr<storage::ShardedInputLog> inputlog, const std::string& input_log_path);
+
+  // Return inputlog related.
+  std::shared_ptr<storage::ShardedInputLog> inputlog() const { return inputlog_; }
+  const std::string& input_log_path() const { return input_log_path_; }
+
+  // Initialize input log
+  virtual void initialize_input_log(const FineTuneParams& params);
+  
+  // Close operation
+  virtual void close() { }
+  // Sync operation
+  virtual void sync() { }
+
+  // Create database session
+  virtual std::shared_ptr<DatabaseSession> create_session() {
+    LOG(FATAL) << "not implement create session";
+    return nullptr;
+  }
+
+ protected:
   // Create new column store.
   virtual void recovery_create_new_column(ParamId id) { }
 
@@ -48,7 +65,11 @@ class Database {
   virtual void recovery_update_rescue_points(ParamId id, const std::vector<storage::LogicAddr>& addrs) { }
 
   // Recovery write.
-  virtual storage::NBTreeAppendResult recovery_write(Sample const& sample, bool allow_duplicates) { }
+  virtual storage::NBTreeAppendResult recovery_write(Sample const& sample, bool allow_duplicates) {
+    return storage::NBTreeAppendResult::FAIL_BAD_VALUE;
+  }
+  // Return series matcher
+  virtual SeriesMatcher* global_matcher() { return nullptr;  }
 };
 
 }  // namespace stdb

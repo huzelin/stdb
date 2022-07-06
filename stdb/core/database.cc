@@ -7,9 +7,9 @@
 
 namespace stdb {
 
-void Dataabse::initialize_input_log(const FineTuneParams& params) {
+void Database::initialize_input_log(const FineTuneParams& params) {
   if (params.input_log_path) {
-    LOG(INFO) "WAL enabled, path: " << params.input_log_path
+    LOG(INFO) << "WAL enabled, path: " << params.input_log_path
         << ", nvolumes: " << params.input_log_volume_numb
         <<  ", volume-size: " << params.input_log_volume_size;
 
@@ -25,13 +25,18 @@ void Dataabse::initialize_input_log(const FineTuneParams& params) {
   }
 }
 
-bool Database::run_recovery_is_enabled(const FineTuneParams &params) {
+void Database::set_input_log(std::shared_ptr<storage::ShardedInputLog> inputlog, const std::string& input_log_path) {
+  inputlog_ = inputlog;
+  input_log_path_ = input_log_path;
+}
+
+bool Database::wal_recovery_is_enabled(const FineTuneParams &params, int* ccr) {
   auto run_wal_recovery = false;
-  int ccr = 0;
+  *ccr = 0;
   if (params.input_log_path) {
     common::Status status;
-    std::tie(status, ccr) = storage::ShardedInputLog::find_logs(params.input_log_path);
-    if (status.IsOk() && ccr > 0) {
+    std::tie(status, *ccr) = storage::ShardedInputLog::find_logs(params.input_log_path);
+    if (status.IsOk() && *ccr > 0) {
       run_wal_recovery = true;
     }
   }
@@ -48,7 +53,7 @@ storage::InputLog* Database::get_input_log() {
     int nhashes = s_hash_counter.load();
     for (int i = 0; i < nhashes; i++) {
       if (s_known_hashes[i] == hash) {
-        return &log->get_shard(i);
+        return &inputlog_->get_shard(i);
       }
     }
     // Insert new value

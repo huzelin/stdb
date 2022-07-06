@@ -1,7 +1,7 @@
 /*!
  * \file server_meta_storage_test.cc
  */
-#include "stdb/core/server_meta_storage.h"
+#include "stdb/metastorage/server_meta_storage.h"
 
 #include "stdb/common/apr_utils.h"
 
@@ -15,7 +15,7 @@ TEST(TestServerMetaStorage, Test1) {
   ServerMetaStorage storage("/tmp/test_server_meta_storage.sqlite");
   storage.init_config("db1", "2022.07.01", "FixedMemory");
 
-  auto val = storage.get_dbname();
+  auto val = storage.get_database_name();
   EXPECT_STREQ("db1", val.c_str());
 
   val = storage.get_creation_datetime();

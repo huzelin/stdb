@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef STDB_CORE_WORKER_META_STORAGE_H_
-#define STDB_CORE_WORKER_META_STORAGE_H_
+#ifndef STDB_METASTORAGE_WORKER_META_STORAGE_H_
+#define STDB_METASTORAGE_WORKER_META_STORAGE_H_
 
 #include <cstddef>
 #include <memory>
@@ -23,14 +23,9 @@
 #include <condition_variable>
 #include <boost/optional.hpp>
 
-#include <apr.h>
-#include <apr_dbd.h>
-
-#include "stdb/common/apr_utils.h"
-#include "stdb/common/basic.h"
-#include "stdb/common/status.h"
-#include "stdb/core/synchronization.h"
 #include "stdb/index/seriesparser.h"
+#include "stdb/metastorage/meta_storage.h"
+#include "stdb/metastorage/synchronization.h"
 #include "stdb/storage/volume_registry.h"
 
 namespace stdb {
@@ -39,33 +34,13 @@ namespace stdb {
  * Metadata includes:
  * - Volumes list
  * - Configuration data
- * - Key to id mapping
  */
-struct WorkerMetaStorage : storage::VolumeRegistry {
-  // Typedefs
-  typedef std::unique_ptr<apr_pool_t, decltype(&delete_apr_pool)> PoolT;
-  typedef const apr_dbd_driver_t* DriverT;
-  typedef std::unique_ptr<apr_dbd_t, AprHandleDeleter> HandleT;
-  typedef apr_dbd_prepared_t* PreparedT;
-
-  // Members
-  PoolT           pool_;
-  DriverT         driver_;
-  HandleT         handle_;
-  // PreparedT       insert_;
-
-  // Synchronization
-  mutable std::mutex                                tran_lock_;
-
-  std::unordered_map<ParamId, std::vector<u64>> pending_rescue_points_;
-  std::unordered_map<u32, VolumeDesc>               pending_volumes_;
-  std::string                                       db_name_;
-  std::shared_ptr<Synchronization>                 synchronization_;
-
+struct WorkerMetaStorage : public storage::VolumeRegistry, public MetaStorage {
+ public:
   /** Create new or open existing db.
    * @throw std::runtime_error in a case of error
    */
-  WorkerMetaStorage(const char* db, const char* db_name, std::shared_ptr<Synchronization>& synchronization);
+  WorkerMetaStorage(const char* db, std::shared_ptr<Synchronization>& synchronization);
 
   /** Initialize volumes table
    * @throw std::runtime_error in a case of error
@@ -117,26 +92,16 @@ struct WorkerMetaStorage : storage::VolumeRegistry {
   /** Create tables if database is empty
    * @throw std::runtime_error in a case of error
    */
-  void create_tables();
+  void create_worker_tables();
 
-  void begin_transaction();
-  void end_transaction();
+  // Synchronization
+  mutable std::mutex                                tran_lock_;
 
-  /** Execute query that doesn't return anything.
-   * @throw std::runtime_error in a case of error
-   * @return number of rows changed
-   */
-  int execute_query(std::string query);
-
-  typedef std::vector<std::string> UntypedTuple;
-
-  /** Execute select query and return untyped results.
-   * @throw std::runtime_error in a case of error
-   * @return bunch of strings with results
-   */
-  std::vector<UntypedTuple> select_query(const char* query) const;
+  std::unordered_map<ParamId, std::vector<u64>> pending_rescue_points_;
+  std::unordered_map<u32, VolumeDesc>               pending_volumes_;
+  std::shared_ptr<Synchronization>                 synchronization_;
 };
 
 }  // namespace stdb
 
-#endif  // STDB_CORE_WORKER_META_STORAGE_H_
+#endif  // STDB_METASTORAGE_WORKER_META_STORAGE_H_

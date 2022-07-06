@@ -3,13 +3,15 @@
  */
 #include "stdb/core/server_database.h"
 
+#include "stdb/core/recovery_visitor.h"
+
 namespace stdb {
 
 ServerDatabase::ServerDatabase() {
   metadata_.reset(new ServerMetaStorage(":memory"));
 }
 
-ServerDatabase::ServerDatabase(const char* path, const FineTuneParams &params) {
+ServerDatabase::ServerDatabase(const char* path, const FineTuneParams &params, Database* parent) {
   metadata_.reset(new ServerMetaStorage(path));
 
   // Update series matcher
@@ -21,7 +23,7 @@ ServerDatabase::ServerDatabase(const char* path, const FineTuneParams &params) {
   if (!status.IsOk()) {
     LOG(FATAL) << "Cann't read series names";
   }
-  run_recovery(params);
+  run_recovery(params, parent ? parent : this);
 }
 
 bool ServerDatabase::init_series_id(const char* begin, const char* end, Sample* sample, PlainSeriesMatcher* local_matcher,
@@ -36,7 +38,7 @@ bool ServerDatabase::init_series_id(const char* begin, const char* end, Sample* 
       id = static_cast<u64>(global_matcher_.add(begin, end));
       create_new = true;
       // write wal for server meta storage.
-      write_wal(ilog, begin, end - begin, session_waiter);
+      write_wal(ilog, id, begin, end - begin, session_waiter);
     }
   }
   sample->paramid = id;
@@ -64,8 +66,74 @@ void ServerDatabase::trigger_meta_sync() {
                           std::vector<Location>* locations) {
     std::lock_guard<std::mutex> guard(lock_);
     global_matcher_.pull_new_series(names, locations);
-  }
+  };
   metadata_->sync_with_metadata_storage(get_names);
+}
+
+void ServerDatabase::close() {
+  this->trigger_meta_sync();
+}
+
+void ServerDatabase::sync() {
+  this->trigger_meta_sync();
+}
+
+common::Status ServerDatabase::new_database(const char* base_file_name, const char* metadata_path, const char* bstore_type) {
+  boost::filesystem::path metpath(metadata_path);
+  metpath = boost::filesystem::absolute(metpath);
+
+  std::string sqlitebname = std::string(base_file_name) + ".stdb";
+  boost::filesystem::path sqlitepath = metpath / sqlitebname;
+
+  if (!boost::filesystem::exists(metpath)) {
+    LOG(INFO) << std::string(metadata_path) + " doesn't exists, trying to create directory";
+    boost::filesystem::create_directories(metpath);
+  } else {
+    if (!boost::filesystem::is_directory(metpath)) {
+      LOG(ERROR) << metadata_path << " is not a directory";
+      return common::Status::BadArg();
+    }
+  }
+
+  if (boost::filesystem::exists(sqlitepath)) {
+    LOG(ERROR) << "Database is already exists";
+    return common::Status::BadArg();
+  }
+
+  try {
+    auto storage = std::make_shared<ServerMetaStorage>(sqlitepath.c_str());
+
+    auto now = apr_time_now();
+    char date_time[0x100];
+    apr_rfc822_date(date_time, now);
+
+    storage->init_config(base_file_name, date_time, bstore_type);
+  } catch (std::exception const& err) {
+    LOG(ERROR) << "Can't create metadata file " << sqlitepath << ", the error is: " << err.what();
+    return common::Status::BadArg();
+  }
+  return common::Status::Ok();
+}
+
+common::Status ServerDatabase::remove_database(const char* file_name, const char* wal_path) {
+  auto perms = boost::filesystem::status(file_name).permissions();
+  if ((perms && boost::filesystem::owner_write) == 0) {
+    return common::Status::EAccess();
+  }
+  if (!boost::filesystem::remove(file_name)) {
+    LOG(ERROR) << file_name << " file is not deleted!";
+  } else {
+    LOG(INFO) << file_name << " was deleted";
+  }
+
+  common::Status status;
+  int card;
+  std::tie(status, card) = storage::ShardedInputLog::find_logs(wal_path);
+  if (status.IsOk() && card >  0) {
+    auto ilog = std::make_shared<storage::ShardedInputLog>(card, wal_path);
+    ilog->delete_files();
+  }
+  return common::Status::Ok();
 }
 
 void ServerDatabase::write_wal(storage::InputLog* ilog, ParamId id, const char* begin, u32 size, SessionWaiter* session_waiter) {
@@ -86,14 +154,52 @@ void ServerDatabase::write_wal(storage::InputLog* ilog, ParamId id, const char* 
   }
 }
 
-void ServerDatabase::run_recovery(const FineTuneParams &params) {
-  if (!run_recovery_is_enabled(params)) {
+void ServerDatabase::run_recovery(const FineTuneParams &params, Database* database) {
+  int ccr = 0;
+  if (!wal_recovery_is_enabled(params, &ccr)) {
     return;
   }
-  
+
   std::vector<ParamId> new_ids;
   auto ilog = std::make_shared<storage::ShardedInputLog>(ccr, params.input_log_path);
-  run_inputlog_metadata_recovery(ilog.get(), &new_ids);
+  run_inputlog_metadata_recovery(ilog.get(), &new_ids, database);
+}
+
+void ServerDatabase::run_inputlog_metadata_recovery(
+    storage::ShardedInputLog* ilog,
+    std::vector<ParamId>* restored_ids,
+    Database* database) {
+  ServerRecoveryVisitor visitor;
+  visitor.server_database = database;
+  visitor.restored_ids = restored_ids;
+  bool proceed = true;
+  size_t nitems = 0x1000;
+  u64 nsegments = 0;
+  std::vector<storage::InputLogRow> rows(nitems);
+  LOG(INFO) << "WAL meta data recovery started";
+
+  while (proceed) {
+    common::Status status;
+    u32 outsize;
+    std::tie(status, outsize) = ilog->read_next(nitems, rows.data());
+    if (status.IsOk() || (status.Code() == common::Status::kNoData && outsize > 0)) {
+      for (u32 ix = 0; ix < outsize; ix++) {
+        const storage::InputLogRow& row = rows.at(ix);
+        visitor.reset(row.id);
+        proceed = row.payload.apply_visitor(visitor);
+      }
+      nsegments++;
+    } else if (status.Code() == common::Status::kNoData) {
+      LOG(INFO) << "WAL metadata recovery completed";
+      LOG(INFO) << std::to_string(nsegments) + " segments scanned";
+      proceed = false;
+    } else {
+      LOG(ERROR) << "WAL recovery error: " << status.ToString();
+      proceed = false;
+    }
+  }
+  ilog->reopen();
+  ilog->delete_files();
 }
 
 }  // namespace stdb

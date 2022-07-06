@@ -2,6 +2,9 @@
  * \file singleton.h
  * \brief Singleton utility
  **/
+#ifndef STDB_COMMON_SINGLETON_H_
+#define STDB_COMMON_SINGLETON_H_
+
 #include <utility>
 #include <memory>
 #include <mutex>
@@ -47,3 +50,5 @@ class Singleton : public SingletonBase<T>{ };
 
 }  // namespace common
 }  // namespace stdb
+
+#endif  // STDB_COMMON_SINGLETON_H_
