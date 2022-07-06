@@ -29,10 +29,10 @@ class Database {
   // Whether wal recover is enabled.
   bool wal_recovery_is_enabled(const FineTuneParams &params, int* ccr);
 
+ public:
   // Get current input log
   storage::InputLog* get_input_log();
 
- public:
   friend class ServerRecoveryVisitor;
   friend class WorkerRecoveryVisitor;
 

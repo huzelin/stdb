@@ -26,6 +26,9 @@ class WorkerDatabase : public Database {
                  std::shared_ptr<Synchronization> synchronization,
                  Database* parent = nullptr);
 
+  // Return cstore
+  std::shared_ptr<storage::ColumnStore> cstore() const { return cstore_; }
+
   /**
    * @brief called before object destructor, all ingestion sessions should be
    * stooped first.

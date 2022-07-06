@@ -9,7 +9,7 @@
 
 namespace stdb {
 
-class StandaloneDatabase : public Database {
+class StandaloneDatabase : public Database, public std::enable_shared_from_this<StandaloneDatabase> {
  protected:
   std::shared_ptr<ServerDatabase> server_database_;
   std::shared_ptr<WorkerDatabase> worker_database_;
@@ -24,12 +24,16 @@ class StandaloneDatabase : public Database {
   StandaloneDatabase(const char* server_path, const char* worker_path,
                      const FineTuneParams& params, std::shared_ptr<Synchronization> synchronization);
 
+  std::shared_ptr<WorkerDatabase> worker_database() { return worker_database_; }
+
   void initialize_input_log(const FineTuneParams& params) override;
 
   // Close operation
   void close() override;
   // Sync operation
   void sync() override;
+  // create write session
+  std::shared_ptr<DatabaseSession> create_session() override;
 
   /* Create empty database from scratch.
    * @param base_file_name is database name (excl suffix)

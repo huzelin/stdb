@@ -117,7 +117,7 @@ common::Status ServerDatabase::new_database(const char* base_file_name, const ch
 
 common::Status ServerDatabase::remove_database(const char* file_name, const char* wal_path) {
   auto perms = boost::filesystem::status(file_name).permissions();
-  if ((perms && boost::filesystem::owner_write) == 0) {
+  if ((perms & boost::filesystem::owner_write) == 0) {
     return common::Status::EAccess();
   }
   if (!boost::filesystem::remove(file_name)) {

@@ -3,6 +3,10 @@
  */
 #include "stdb/core/standalone_database.h"
 
+#include <memory>
+
+#include "stdb/core/standalone_database_session.h"
+
 namespace stdb {
 
 StandaloneDatabase::StandaloneDatabase(std::shared_ptr<Synchronization> synchronization) {
@@ -32,6 +36,14 @@ void StandaloneDatabase::close() {
 void StandaloneDatabase::sync() {
   server_database_->sync();
   worker_database_->sync();
+}
+
+std::shared_ptr<DatabaseSession> StandaloneDatabase::create_session() {
+  std::shared_ptr<storage::CStoreSession> session =
+      std::make_shared<storage::CStoreSession>(worker_database_->cstore());
+  return std::make_shared<StandaloneDatabaseSession>(shared_from_this(),
+                                                     session,
+                                                     inputlog_.get());
 }
 
 common::Status StandaloneDatabase::new_database(
