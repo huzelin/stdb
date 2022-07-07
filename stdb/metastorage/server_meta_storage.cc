@@ -81,6 +81,7 @@ void ServerMetaStorage::sync_with_metadata_storage(
   std::vector<Location>                 locations;
   
   pull_new_series(&newnames, &locations);
+  if (newnames.empty()) return;
 
   // This lock is needed to prevent race condition during log replay.
   // When log replay completes, recovery procedure have to start synchronization
@@ -189,8 +190,9 @@ common::Status ServerMetaStorage::load_matcher_data(SeriesMatcherBase& matcher) 
   auto query = "SELECT series_id || ' ' || keyslist, storage_id, lon, lat FROM stdb_series;";
   try {
     auto results = select_query(query);
+    LOG(INFO) << "load matcher data size=" << results.size();
     for(auto row: results) {
-      if (row.size() != 2) {
+      if (row.size() != 4) {
         continue;
       }
       auto series = row.at(0);

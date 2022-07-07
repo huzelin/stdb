@@ -29,7 +29,7 @@ bool ServerRecoveryVisitor::operator()(const storage::InputLogSeriesName& sname)
           << ". Series name " << sname.value << " is skipped.";
       return true;
     }
-    server_database->global_matcher()->_add(sname.value, id);
+    server_database->global_matcher()->_add_pending(sname.value, id);
     create_new = true;
   }
   if (create_new) {

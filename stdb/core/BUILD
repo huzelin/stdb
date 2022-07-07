@@ -21,6 +21,7 @@ cc_library(
     "storage_api.cc",
   ],
   hdrs = [
+    "role.h",
     "controller.h",
     "database.h",
     "database_session.h",
@@ -29,7 +30,7 @@ cc_library(
     "worker_database.h",
     "standalone_database.h",
     "standalone_database_session.h",
-    "session_waiter.h",
+    "sync_waiter.h",
 
     #"stdb.h",
     "cursor.h",

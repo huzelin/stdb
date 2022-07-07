@@ -7,7 +7,7 @@
 
 namespace stdb {
 
-void Database::initialize_input_log(const FineTuneParams& params) {
+void Database::initialize(const FineTuneParams& params) {
   if (params.input_log_path) {
     LOG(INFO) << "WAL enabled, path: " << params.input_log_path
         << ", nvolumes: " << params.input_log_volume_numb

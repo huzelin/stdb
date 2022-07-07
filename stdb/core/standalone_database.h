@@ -9,27 +9,36 @@
 
 namespace stdb {
 
-class StandaloneDatabase : public Database {
+class StandaloneDatabase : public Database, public std::enable_shared_from_this<StandaloneDatabase> {
  protected:
+  std::shared_ptr<SyncWaiter> sync_waiter_;
   std::shared_ptr<ServerDatabase> server_database_;
   std::shared_ptr<WorkerDatabase> worker_database_;
  
  public:
   // Create empty in-memory database
-  StandaloneDatabase(std::shared_ptr<Synchronization> synchronization);
+  StandaloneDatabase(std::shared_ptr<Synchronization> synchronization,
+                     std::shared_ptr<SyncWaiter> sync_waiter);
 
   /* @brief Open storage engine
    * @param path is a path to main files
    */
   StandaloneDatabase(const char* server_path, const char* worker_path,
-                     const FineTuneParams& params, std::shared_ptr<Synchronization> synchronization);
+                     const FineTuneParams& params,
+                     std::shared_ptr<Synchronization> synchronization,
+                     std::shared_ptr<SyncWaiter> sync_waiter);
 
-  void initialize_input_log(const FineTuneParams& params) override;
+  std::shared_ptr<ServerDatabase> server_database() { return server_database_; }
+  std::shared_ptr<WorkerDatabase> worker_database() { return worker_database_; }
+
+  void initialize(const FineTuneParams& params) override;
 
   // Close operation
   void close() override;
   // Sync operation
   void sync() override;
+  // create write session
+  std::shared_ptr<DatabaseSession> create_session() override;
 
   /* Create empty database from scratch.
    * @param base_file_name is database name (excl suffix)

@@ -3,22 +3,34 @@
  */
 #include "stdb/core/standalone_database.h"
 
+#include <memory>
+
+#include "stdb/core/controller.h"
+#include "stdb/core/standalone_database_session.h"
+
 namespace stdb {
 
-StandaloneDatabase::StandaloneDatabase(std::shared_ptr<Synchronization> synchronization) {
+StandaloneDatabase::StandaloneDatabase(
+    std::shared_ptr<Synchronization> synchronization,
+    std::shared_ptr<SyncWaiter> sync_waiter) : sync_waiter_(sync_waiter) {
   worker_database_.reset(new WorkerDatabase(synchronization));
   server_database_.reset(new ServerDatabase());
 }
 
 StandaloneDatabase::StandaloneDatabase(
     const char* server_path, const char* worker_path,
-    const FineTuneParams& params, std::shared_ptr<Synchronization> synchronization) {
-  server_database_.reset(new ServerDatabase(server_path, params, this));
-  worker_database_.reset(new WorkerDatabase(worker_path, params, synchronization, this));
+    const FineTuneParams& params,
+    std::shared_ptr<Synchronization> synchronization,
+    std::shared_ptr<SyncWaiter> sync_waiter) : sync_waiter_(sync_waiter) {
+  server_database_.reset(new ServerDatabase(server_path, params));
+  worker_database_.reset(new WorkerDatabase(worker_path, params, synchronization));
 }
 
-void StandaloneDatabase::initialize_input_log(const FineTuneParams& params) {
-  Database::initialize_input_log(params);
+void StandaloneDatabase::initialize(const FineTuneParams& params) {
+  server_database_->run_recovery(params, this);
+  worker_database_->run_recovery(params, this);
+
+  Database::initialize(params);
 
   server_database_->set_input_log(inputlog(), input_log_path());
   worker_database_->set_input_log(inputlog(), input_log_path());
@@ -32,6 +44,14 @@ void StandaloneDatabase::close() {
 void StandaloneDatabase::sync() {
   server_database_->sync();
   worker_database_->sync();
+}
+
+std::shared_ptr<DatabaseSession> StandaloneDatabase::create_session() {
+  std::shared_ptr<storage::CStoreSession> session =
+      std::make_shared<storage::CStoreSession>(worker_database_->cstore());
+  return std::make_shared<StandaloneDatabaseSession>(shared_from_this(),
+                                                     session,
+                                                     sync_waiter_);
 }
 
 common::Status StandaloneDatabase::new_database(
@@ -61,12 +81,14 @@ common::Status StandaloneDatabase::new_database(
 
 // Create new column store.
 void StandaloneDatabase::recovery_create_new_column(ParamId id) {
-
+  auto cstore = worker_database_->cstore();
+  cstore->create_new_column(id);
 }
 
 // Update rescue points
 void StandaloneDatabase::recovery_update_rescue_points(ParamId id, const std::vector<storage::LogicAddr>& addrs) {
-
+  std::vector<storage::LogicAddr> copy_addrs = addrs;
+  worker_database_->update_rescue_point(id, std::move(copy_addrs));
 }
 
 // Recovery write.

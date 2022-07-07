@@ -67,6 +67,25 @@ i64 SeriesMatcher::add_impl(const char* begin, const char* end) {
   return id;
 }
 
+void SeriesMatcher::_add_pending(const std::string& series, i64 id) {
+  if (series.empty()) {
+    return;
+  }
+  std::lock_guard<std::mutex> guard(mutex);
+  // if id is greater than series_id, change series_id to id + 1.
+  if (series_id <= id) {
+    series_id = id + 1;
+  }
+  common::Status status;
+  StringT sname;
+  std::tie(status, sname) = index.append(series.data(), series.data() + series.size());
+  table[sname] = id;
+  inv_table[id] = sname;
+
+  auto tup = std::make_tuple(std::get<0>(sname), std::get<1>(sname), id);
+  names.push_back(tup);
+}
+
 void SeriesMatcher::_add(const std::string& series, i64 id) {
   if (series.empty()) {
     return;

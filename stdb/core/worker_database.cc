@@ -53,8 +53,7 @@ WorkerDatabase::WorkerDatabase(std::shared_ptr<Synchronization> synchronization)
 }
 
 WorkerDatabase::WorkerDatabase(const char* path, const FineTuneParams& params,
-                               std::shared_ptr<Synchronization> synchronization,
-                               Database* parent) {
+                               std::shared_ptr<Synchronization> synchronization) {
   metadata_.reset(new WorkerMetaStorage(path, synchronization));
 
   std::string bstore_type = "FixedSizeFileStorage";
@@ -71,14 +70,6 @@ WorkerDatabase::WorkerDatabase(const char* path, const FineTuneParams& params,
     LOG(FATAL) << "Unknown blockstore type (" + bstore_type + ")";
   }
   cstore_ = std::make_shared<storage::ColumnStore>(bstore_);
-
-  // Update column store
-  std::unordered_map<ParamId, std::vector<storage::LogicAddr>> mapping;
-  auto status = metadata_->load_rescue_points(mapping);
-  if (!status.IsOk()) {
-    LOG(FATAL) << "Can't read rescue points";
-  }
-  run_recovery(params, &mapping, parent ? parent : this);
 }
 
 void WorkerDatabase::close() {
@@ -110,6 +101,10 @@ void WorkerDatabase::close() {
 
 void WorkerDatabase::sync() {
   metadata_->sync_with_metadata_storage();
+}
+
+void WorkerDatabase::update_rescue_point(ParamId id, std::vector<storage::LogicAddr>&& rpoints) {
+  metadata_->add_rescue_point(id, rpoints);
 }
 
 void WorkerDatabase::close_specific_columns(const std::vector<u64>& ids) {
@@ -228,24 +223,29 @@ common::Status WorkerDatabase::new_database(const char* base_file_name,
   return common::Status::Ok();
 }
 
-void WorkerDatabase::update_rescue_point(ParamId id, std::vector<storage::LogicAddr>&& rpoints) {
-  metadata_->add_rescue_point(id, rpoints);
-}
-
 void WorkerDatabase::run_recovery(
     const FineTuneParams &params,
-    std::unordered_map<ParamId, std::vector<storage::LogicAddr>>* mapping,
     Database* database) {
+  LOG(INFO) << "WAL meta data recovery started";
+  std::unordered_map<ParamId, std::vector<storage::LogicAddr>> mapping;
+  auto status = metadata_->load_rescue_points(mapping);
+  if (!status.IsOk()) {
+    LOG(FATAL) << "Can't read rescue points";
+  }
+
   int ccr = 0;
   auto run_wal_recovery = wal_recovery_is_enabled(params, &ccr);
 
   common::Status restore_status;
   std::vector<ParamId> restored_ids;
-  std::tie(restore_status, restored_ids) = cstore_->open_or_restore(*mapping, params.input_log_path == nullptr);
+  std::tie(restore_status, restored_ids) = cstore_->open_or_restore(mapping, params.input_log_path == nullptr);
   if (run_wal_recovery) {
     auto ilog = std::make_shared<storage::ShardedInputLog>(ccr, params.input_log_path);
-    run_input_log_recovery(ilog.get(), restored_ids, mapping, database);
+    run_input_log_recovery(ilog.get(), restored_ids, &mapping, database);
+
+    sync();
   }
+  LOG(INFO) << "WAL metadata recovery completed";
 }
 
 void WorkerDatabase::run_input_log_recovery(storage::ShardedInputLog* ilog, const std::vector<ParamId>& ids2restore,
