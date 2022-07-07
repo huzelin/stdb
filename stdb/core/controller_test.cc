@@ -35,6 +35,7 @@ TEST(TestController, Test2) {
 
     session->write(sample);
   }
+  controller->close();
 }
 
 }  // namespace stdb
