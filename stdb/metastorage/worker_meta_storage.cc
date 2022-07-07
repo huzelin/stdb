@@ -195,6 +195,10 @@ void WorkerMetaStorage::sync_with_metadata_storage() {
     });
   }
 
+  if (rescue_points.empty() && volume_records.empty()) {
+    return;
+  }
+
   // This lock is needed to prevent race condition during log replay.
   // When log replay completes, recovery procedure have to start synchronization
   // from another thread. If previous transaction wasn't finished yet it will

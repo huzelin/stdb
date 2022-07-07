@@ -11,7 +11,7 @@ ServerDatabase::ServerDatabase() {
   metadata_.reset(new ServerMetaStorage(":memory"));
 }
 
-ServerDatabase::ServerDatabase(const char* path, const FineTuneParams &params, Database* parent) {
+ServerDatabase::ServerDatabase(const char* path, const FineTuneParams &params) {
   metadata_.reset(new ServerMetaStorage(path));
 
   // Update series matcher
@@ -23,11 +23,10 @@ ServerDatabase::ServerDatabase(const char* path, const FineTuneParams &params, D
   if (!status.IsOk()) {
     LOG(FATAL) << "Cann't read series names";
   }
-  run_recovery(params, parent ? parent : this);
 }
 
 bool ServerDatabase::init_series_id(const char* begin, const char* end, Sample* sample, PlainSeriesMatcher* local_matcher,
-                                    storage::InputLog* ilog, SessionWaiter* session_waiter) {
+                                    storage::InputLog* ilog, SyncWaiter* sync_waiter) {
   u64 id = 0;
   bool create_new = false;
   {
@@ -38,7 +37,7 @@ bool ServerDatabase::init_series_id(const char* begin, const char* end, Sample* 
       id = static_cast<u64>(global_matcher_.add(begin, end));
       create_new = true;
       // write wal for server meta storage.
-      write_wal(ilog, id, begin, end - begin, session_waiter);
+      write_wal(ilog, id, begin, end - begin, sync_waiter);
     }
   }
   sample->paramid = id;
@@ -136,7 +135,7 @@ common::Status ServerDatabase::remove_database(const char* file_name, const char
   return common::Status::Ok();
 }
 
-void ServerDatabase::write_wal(storage::InputLog* ilog, ParamId id, const char* begin, u32 size, SessionWaiter* session_waiter) {
+void ServerDatabase::write_wal(storage::InputLog* ilog, ParamId id, const char* begin, u32 size, SyncWaiter* sync_waiter) {
   if (ilog == nullptr) return;
 
   std::vector<ParamId> staleids;
@@ -147,7 +146,7 @@ void ServerDatabase::write_wal(storage::InputLog* ilog, ParamId id, const char* 
       // backedup.
       std::promise<void> barrier;
       std::future<void> future = barrier.get_future();
-      session_waiter->add_sync_barrier(std::move(barrier));
+      sync_waiter->add_sync_barrier(std::move(barrier));
       future.wait();
     }
     ilog->rotate();
@@ -163,6 +162,8 @@ void ServerDatabase::run_recovery(const FineTuneParams &params, Database* databa
   std::vector<ParamId> new_ids;
   auto ilog = std::make_shared<storage::ShardedInputLog>(ccr, params.input_log_path);
   run_inputlog_metadata_recovery(ilog.get(), &new_ids, database);
+
+  sync();
 }
 
 void ServerDatabase::run_inputlog_metadata_recovery(

@@ -18,11 +18,11 @@ class ServerDatabase : public Database {
   ServerDatabase();
 
   // Open meta database.
-  ServerDatabase(const char* path, const FineTuneParams &params, Database* parent = nullptr);
+  ServerDatabase(const char* path, const FineTuneParams &params);
 
   // Init series id, if return true, a new id created, else return false.
   bool init_series_id(const char* begin, const char* end, Sample* sample, PlainSeriesMatcher* local_matcher,
-                      storage::InputLog* ilog, SessionWaiter* session_waiter);
+                      storage::InputLog* ilog, SyncWaiter* sync_waiter);
 
   // Get series name
   int get_series_name(ParamId id, char* buffer, size_t buffer_size, PlainSeriesMatcher *local_matcher);
@@ -52,12 +52,13 @@ class ServerDatabase : public Database {
   // delete the files
   static common::Status remove_database(const char* file_name, const char* wal_path);
 
- protected:
-  // write wal
-  void write_wal(storage::InputLog* ilog, ParamId id, const char* begin, u32 size, SessionWaiter* session_waiter);
-
   // run recovery
   void run_recovery(const FineTuneParams &params, Database* database);
+
+ protected:
+  // write wal
+  void write_wal(storage::InputLog* ilog, ParamId id, const char* begin, u32 size, SyncWaiter* sync_waiter);
+
   void run_inputlog_metadata_recovery(
       storage::ShardedInputLog* ilog,
       std::vector<ParamId>* restored_ids,

@@ -26,14 +26,16 @@ TEST(TestStandaloneDatabase, Test2) {
   FineTuneParams params;
   params.input_log_path = "/tmp/test_standalone_database/input_log/";
   std::shared_ptr<Synchronization> sync(new Synchronization());
+  std::shared_ptr<SyncWaiter> sync_waiter(new SyncWaiter());
 
   StandaloneDatabase database(
       "/tmp/test_standalone_database/meta/server/test1.stdb",
       "/tmp/test_standalone_database/meta/worker/test1.stdb",
       params,
-      sync
+      sync,
+      sync_waiter
       );
-  database.initialize_input_log(params);
+  database.initialize(params);
 
   database.close();
 }

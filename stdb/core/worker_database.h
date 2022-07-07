@@ -23,8 +23,7 @@ class WorkerDatabase : public Database {
   WorkerDatabase(std::shared_ptr<Synchronization> synchronization);
 
   WorkerDatabase(const char* path, const FineTuneParams &params,
-                 std::shared_ptr<Synchronization> synchronization,
-                 Database* parent = nullptr);
+                 std::shared_ptr<Synchronization> synchronization);
 
   // Return cstore
   std::shared_ptr<storage::ColumnStore> cstore() const { return cstore_; }
@@ -36,6 +35,9 @@ class WorkerDatabase : public Database {
   void close() override;
   // Sync
   void sync() override;
+
+  // update rescue point
+  void update_rescue_point(ParamId id, std::vector<storage::LogicAddr>&& rpoints);
 
   /**
    * @brief Flush and close every column in the list
@@ -58,13 +60,9 @@ class WorkerDatabase : public Database {
                                      u64 volume_size,
                                      bool allocate);
 
+  void run_recovery(const FineTuneParams &params, Database* database);
+
  protected:
-  // update rescue point
-  void update_rescue_point(ParamId id, std::vector<storage::LogicAddr>&& rpoints);
-
-  void run_recovery(const FineTuneParams &params, std::unordered_map<ParamId, std::vector<storage::LogicAddr>>* mapping,
-                    Database* database);
-
   // recovery from inputlog
   void run_input_log_recovery(storage::ShardedInputLog* ilog, const std::vector<ParamId>& ids2restore,
                               std::unordered_map<ParamId, std::vector<storage::LogicAddr>>* mapping,

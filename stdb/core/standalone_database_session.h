@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include "stdb/core/sync_waiter.h"
 #include "stdb/core/database_session.h"
 #include "stdb/index/seriesparser.h"
 #include "stdb/storage/column_store.h"
@@ -21,13 +22,13 @@ class StandaloneDatabaseSession : public DatabaseSession {
 
   std::shared_ptr<StandaloneDatabase> database_;
   std::shared_ptr<storage::CStoreSession> session_;
-  storage::ShardedInputLog* slog_;
+  std::shared_ptr<SyncWaiter> sync_waiter_;
   storage::InputLog* ilog_;
 
  public:
   StandaloneDatabaseSession(std::shared_ptr<StandaloneDatabase> database,
                             std::shared_ptr<storage::CStoreSession> session,
-                            storage::ShardedInputLog* log);
+                            std::shared_ptr<SyncWaiter> sync_waiter);
   virtual ~StandaloneDatabaseSession();
 
   // Main functions.
@@ -62,6 +63,9 @@ class StandaloneDatabaseSession : public DatabaseSession {
    * @param query is a string that contains query
    */
   void search(InternalCursor* cursor, const char* query) override;
+
+ protected:
+  void init_ilog();
 };
 
 }  // namespace stdb

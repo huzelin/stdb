@@ -102,16 +102,14 @@ std::unordered_map<ParamId, std::vector<LogicAddr>> ColumnStore::close(const std
 common::Status ColumnStore::create_new_column(ParamId id) {
   std::vector<LogicAddr> empty;
 
-  auto tree = std::make_shared<NBTreeExtentsList>(id, empty, blockstore_);
-  {
-    std::lock_guard<std::mutex> tl(table_lock_);
-    if (columns_.count(id)) {
-      return common::Status::BadArg();
-    } else {
-      columns_[id] = std::move(tree);
-      columns_[id]->force_init();
-      return common::Status::Ok();
-    }
+  std::lock_guard<std::mutex> tl(table_lock_);
+  if (columns_.count(id)) {
+    return common::Status::BadArg();
+  } else {
+    auto tree = std::make_shared<NBTreeExtentsList>(id, empty, blockstore_);
+    columns_[id] = std::move(tree);
+    columns_[id]->force_init();
+    return common::Status::Ok();
   }
 }
 
