@@ -12,7 +12,7 @@ namespace stdb {
 TEST(TestServerMetaStorage, Test1) {
   initialize();
 
-  ServerMetaStorage storage("/tmp/test_server_meta_storage.sqlite", true);
+  ServerMetaStorage storage("/tmp/test_server_meta_storage.sqlite", false);
   storage.init_config("db1", "2022.07.01", "FixedMemory");
 
   auto val = storage.get_database_name();
@@ -34,7 +34,7 @@ TEST(TestServerMetaStorage, Test1) {
 }
 
 TEST(TestServerMetaStorage, Test2) {
-  ServerMetaStorage storage("/tmp/test_server_meta_storage.sqlite", true);
+  ServerMetaStorage storage("/tmp/test_server_meta_storage.sqlite", false);
 
   std::vector<ServerMetaStorage::SeriesT> items;
   std::vector<Location> locations;
@@ -50,11 +50,11 @@ TEST(TestServerMetaStorage, Test2) {
       });
 
   auto prev_largest_id = storage.get_prev_largest_id();
-  EXPECT_EQ(1024, prev_largest_id.value());
+  EXPECT_EQ(64, prev_largest_id.value());
 }
 
 TEST(TestServerMetaStorage, Test3) {
-  ServerMetaStorage storage("/tmp/test_server_meta_storage.sqlite", true);
+  ServerMetaStorage storage("/tmp/test_server_meta_storage.sqlite", false);
   SeriesMatcher series_matcher;
   auto status = storage.load_matcher_data(series_matcher);
   EXPECT_TRUE(status.IsOk());
