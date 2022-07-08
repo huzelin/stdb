@@ -42,7 +42,7 @@ struct MetaStorage {
   std::vector<UntypedTuple> select_query(const char* query) const;
 
  public:
-  typedef PlainSeriesMatcher::SeriesNameT SeriesT;
+  typedef SeriesMatcher::SeriesNameT SeriesT;
   
   MetaStorage(const char* db);
   virtual ~MetaStorage();

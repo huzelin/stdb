@@ -14,16 +14,35 @@ class DatabaseSession {
  public:
   virtual ~DatabaseSession() { }
 
-  /*!
-   * Match series name. If series with such name doesn't exists - create it.
-   * This method should be called for each sample to init its `paramid` field.
+  /* Init static location's IOT device.
+   * @param begin series's begin
+   * @param end series's end
+   * @param location series's location
+   * @param id The allocated series's id
+   * @return operation status
    */
-  virtual common::Status init_series_id(const char* begin, const char* end, Sample* sample) = 0;
+  virtual common::Status init_series_id(const char* begin, const char* end, const Location& location, u64* id) = 0;
+
+  /* Init moving IOT device
+   * @param begin series's begin
+   * @param end series's end
+   * @param id The allocated series's id
+   * @return operation status
+   */
+  virtual common::Status init_series_id(const char* begin, const char* end, u64* id) = 0;
+
+  /* Get series name according to param id.
+   * @param id The series's id
+   * @param buffer The buffer address
+   * @param buffer_size The buffer size
+   * @return Return the series's length of name
+   */
+  virtual int get_series_name(ParamId id, char* buffer, size_t buffer_size) = 0;
 
   /*!
-   * get series name according to param id.
+   * get series name and location
    */
-  virtual common::Status get_series_name(ParamId id, char* buffer, size_t buffer_size) = 0;
+  virtual int get_series_name_and_location(ParamId id, char* buffer, size_t buffer_size, Location* location) = 0;
   
   /*!
    * write sample.

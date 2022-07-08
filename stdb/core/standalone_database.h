@@ -18,7 +18,8 @@ class StandaloneDatabase : public Database, public std::enable_shared_from_this<
  public:
   // Create empty in-memory database
   StandaloneDatabase(std::shared_ptr<Synchronization> synchronization,
-                     std::shared_ptr<SyncWaiter> sync_waiter);
+                     std::shared_ptr<SyncWaiter> sync_waiter,
+                     bool is_moving);
 
   /* @brief Open storage engine
    * @param path is a path to main files
@@ -26,7 +27,8 @@ class StandaloneDatabase : public Database, public std::enable_shared_from_this<
   StandaloneDatabase(const char* server_path, const char* worker_path,
                      const FineTuneParams& params,
                      std::shared_ptr<Synchronization> synchronization,
-                     std::shared_ptr<SyncWaiter> sync_waiter);
+                     std::shared_ptr<SyncWaiter> sync_waiter,
+                     bool is_moving);
 
   std::shared_ptr<ServerDatabase> server_database() { return server_database_; }
   std::shared_ptr<WorkerDatabase> worker_database() { return worker_database_; }
@@ -41,6 +43,7 @@ class StandaloneDatabase : public Database, public std::enable_shared_from_this<
   std::shared_ptr<DatabaseSession> create_session() override;
 
   /* Create empty database from scratch.
+   * @param ismoving If is moving database
    * @param base_file_name is database name (excl suffix)
    * @param metadata_path is a path to metadata storage
    * @param volumes_path is a path to volumes storage
@@ -48,7 +51,8 @@ class StandaloneDatabase : public Database, public std::enable_shared_from_this<
    * @param volume_size is a size of the volume in bytes
    * @return operation status
    */
-  static common::Status new_database(const char* base_file_name,
+  static common::Status new_database(bool ismoving,
+                                     const char* base_file_name,
                                      const char* metadata_path,
                                      const char* volumes_path,
                                      i32 num_volumes,

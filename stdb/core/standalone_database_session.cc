@@ -36,7 +36,7 @@ void StandaloneDatabaseSession::init_ilog() {
   }
 }
 
-common::Status StandaloneDatabaseSession::init_series_id(const char* begin, const char* end, Sample* sample) {
+common::Status StandaloneDatabaseSession::init_series_id(const char* begin, const char* end, const Location& location, u64* id) {
   const char* ksbegin = nullptr;
   const char* ksend = nullptr;
   char buf[LIMITS_MAX_SNAME];
@@ -46,27 +46,59 @@ common::Status StandaloneDatabaseSession::init_series_id(const char* begin, cons
   if (!status.IsOk()) {
     return status;
   }
-  u64 id = local_matcher_.match(ob, ksend);
-  if (id) {
-    sample->paramid = id;
+  *id = local_matcher_.match(ob, ksend);
+  if (*id) {
     return status;
   }
-
   init_ilog();
+
   auto server_database = database_->server_database();
-  auto create_new = server_database->init_series_id(
-      begin, end, sample, &local_matcher_,
-      ilog_, sync_waiter_.get());
+  auto create_new = server_database->init_series_id(begin, end, location, id, &local_matcher_, ilog_, sync_waiter_.get());
   if (create_new) {
-    id = sample->paramid;
     auto worker_database = database_->worker_database();
-    status = worker_database->cstore()->create_new_column(id);
+    status = worker_database->cstore()->create_new_column(*id);
   }
   return status;
 }
 
-common::Status StandaloneDatabaseSession::get_series_name(ParamId id, char* buffer, size_t buffer_size) {
-  return common::Status::Ok();
+common::Status StandaloneDatabaseSession::init_series_id(const char* begin, const char* end, u64* id) {
+  const char* ksbegin = nullptr;
+  const char* ksend = nullptr;
+  char buf[LIMITS_MAX_SNAME];
+  char* ob = static_cast<char*>(buf);
+  char* oe = static_cast<char*>(buf) + LIMITS_MAX_SNAME;
+  auto status = SeriesParser::to_canonical_form(begin, end, ob, oe, &ksbegin, &ksend);
+  if (!status.IsOk()) {
+    return status;
+  }
+  *id = local_matcher_.match(ob, ksend);
+  if (*id) {
+    return status;
+  }
+  init_ilog();
+
+  auto server_database = database_->server_database();
+  auto create_new = server_database->init_series_id(begin, end, id, &local_matcher_, ilog_, sync_waiter_.get());
+  if (create_new) {
+    auto worker_database = database_->worker_database();
+    status = worker_database->cstore()->create_new_column(*id);
+  }
+  return status;
+}
+
+int StandaloneDatabaseSession::get_series_name(ParamId id, char* buffer, size_t buffer_size) {
+  auto name = local_matcher_.id2str(id);
+  if (name.first == nullptr) {
+    auto server_database = database_->server_database();
+    return server_database->get_series_name(id, buffer, buffer_size, &local_matcher_);
+  }
+  memcpy(buffer, name.first, static_cast<size_t>(name.second));
+  return static_cast<int>(name.second);
+}
+
+int StandaloneDatabaseSession::get_series_name_and_location(
+    ParamId id, char* buffer, size_t buffer_size, Location* location) {
+
 }
 
 common::Status StandaloneDatabaseSession::write(const Sample& sample) {

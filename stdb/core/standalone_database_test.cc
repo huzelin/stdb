@@ -14,6 +14,7 @@ TEST(TestStandaloneDatabase, Test1) {
 
   // new database
   StandaloneDatabase::new_database(
+      true,
       "test1",
       "/tmp/test_standalone_database/meta",
       "/tmp/test_standalone_database/volumes",
@@ -33,7 +34,8 @@ TEST(TestStandaloneDatabase, Test2) {
       "/tmp/test_standalone_database/meta/worker/test1.stdb",
       params,
       sync,
-      sync_waiter
+      sync_waiter,
+      true
       );
   database.initialize(params);
 

@@ -7,12 +7,13 @@
 
 namespace stdb {
 
-ServerDatabase::ServerDatabase() {
-  metadata_.reset(new ServerMetaStorage(":memory"));
+ServerDatabase::ServerDatabase(bool is_moving) : Database(is_moving) {
+  metadata_.reset(new ServerMetaStorage(":memory", is_moving));
 }
 
-ServerDatabase::ServerDatabase(const char* path, const FineTuneParams &params) {
-  metadata_.reset(new ServerMetaStorage(path));
+ServerDatabase::ServerDatabase(const char* path, const FineTuneParams &params, bool is_moving)
+  : Database(is_moving) {
+  metadata_.reset(new ServerMetaStorage(path, is_moving));
 
   // Update series matcher
   auto baseline = metadata_->get_prev_largest_id();
@@ -25,8 +26,12 @@ ServerDatabase::ServerDatabase(const char* path, const FineTuneParams &params) {
   }
 }
 
-bool ServerDatabase::init_series_id(const char* begin, const char* end, Sample* sample, PlainSeriesMatcher* local_matcher,
-                                    storage::InputLog* ilog, SyncWaiter* sync_waiter) {
+bool ServerDatabase::init_series_id(const char* begin,
+                                    const char* end,
+                                    u64* sid,
+                                    PlainSeriesMatcher* local_matcher,
+                                    storage::InputLog* ilog,
+                                    SyncWaiter* sync_waiter) {
   u64 id = 0;
   bool create_new = false;
   {
@@ -40,8 +45,34 @@ bool ServerDatabase::init_series_id(const char* begin, const char* end, Sample* 
       write_wal(ilog, id, begin, end - begin, sync_waiter);
     }
   }
-  sample->paramid = id;
+  *sid = id;
   local_matcher->_add(begin, end, id);
+  return create_new;
+}
+
+bool ServerDatabase::init_series_id(const char* begin,
+                                    const char* end,
+                                    const Location& location,
+                                    u64* sid,
+                                    PlainSeriesMatcher* local_matcher,
+                                    storage::InputLog* ilog,
+                                    SyncWaiter* sync_waiter) {
+
+  u64 id = 0;
+  bool create_new = false;
+  {
+    std::lock_guard<std::mutex> guard(lock_);
+    id = static_cast<u64>(global_matcher_.match(begin, end));
+    if (id == 0) {
+      // create new series
+      id = static_cast<u64>(global_matcher_.add(begin, end, location));
+      create_new = true;
+      // write wal for server meta storage
+      write_wal(ilog, id, begin, end - begin, sync_waiter);
+    }
+  }
+  *sid = id;
+  local_matcher->_add(begin, end, id, location);
   return create_new;
 }
 
@@ -61,12 +92,20 @@ int ServerDatabase::get_series_name(ParamId id, char* buffer, size_t buffer_size
 }
 
 void ServerDatabase::trigger_meta_sync() {
-  auto get_names = [this](std::vector<PlainSeriesMatcher::SeriesNameT>* names,
-                          std::vector<Location>* locations) {
-    std::lock_guard<std::mutex> guard(lock_);
-    global_matcher_.pull_new_series(names, locations);
-  };
-  metadata_->sync_with_metadata_storage(get_names);
+  if (is_moving()) {
+    auto get_names = [this](std::vector<PlainSeriesMatcher::SeriesNameT>* names) {
+      std::lock_guard<std::mutex> guard(lock_);
+      global_matcher_.pull_new_series(names);
+    };
+    metadata_->sync_with_metadata_storage(get_names);
+  } else {
+    auto get_names_and_locations = [this](std::vector<PlainSeriesMatcher::SeriesNameT>* names,
+                            std::vector<Location>* locations) {
+      std::lock_guard<std::mutex> guard(lock_);
+      global_matcher_.pull_new_series(names, locations);
+    };
+    metadata_->sync_with_metadata_storage(get_names_and_locations);
+  }
 }
 
 void ServerDatabase::close() {
@@ -77,7 +116,10 @@ void ServerDatabase::sync() {
   this->trigger_meta_sync();
 }
 
-common::Status ServerDatabase::new_database(const char* base_file_name, const char* metadata_path, const char* bstore_type) {
+common::Status ServerDatabase::new_database(bool is_moving,
+                                            const char* base_file_name,
+                                            const char* metadata_path,
+                                            const char* bstore_type) {
   boost::filesystem::path metpath(metadata_path);
   metpath = boost::filesystem::absolute(metpath);
 
@@ -100,7 +142,7 @@ common::Status ServerDatabase::new_database(const char* base_file_name, const ch
   }
 
   try {
-    auto storage = std::make_shared<ServerMetaStorage>(sqlitepath.c_str());
+    auto storage = std::make_shared<ServerMetaStorage>(sqlitepath.c_str(), is_moving);
 
     auto now = apr_time_now();
     char date_time[0x100];

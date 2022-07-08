@@ -5,6 +5,7 @@
 
 #include <sqlite3.h>  // to set trace callback
 
+#include <boost/lexical_cast.hpp>
 #include "stdb/core/standalone_database.h"
 
 namespace stdb {
@@ -44,7 +45,8 @@ std::shared_ptr<Database> Controller::open_standalone_database(const char* dbnam
   if (database) return database;
 
   std::string metadata_path;
-  if (!get_config_database(dbname, &metadata_path)) {
+  bool ismoving = false;
+  if (!get_config_database(dbname, &metadata_path, &ismoving)) {
     return database;
   }
 
@@ -55,25 +57,31 @@ std::shared_ptr<Database> Controller::open_standalone_database(const char* dbnam
   FineTuneParams fine_tune_params;
   fine_tune_params.input_log_path = input_log_path.c_str();
 
-  std::shared_ptr<Database> inited_db(
-      new StandaloneDatabase(server_path.c_str(), worker_path.c_str(), fine_tune_params, synchronization_, sync_waiter_));
-  inited_db->initialize(fine_tune_params);
-  register_database(dbname, inited_db);
+  std::shared_ptr<Database> new_db(
+      new StandaloneDatabase(server_path.c_str(),
+                             worker_path.c_str(),
+                             fine_tune_params,
+                             synchronization_,
+                             sync_waiter_,
+                             ismoving));
+  new_db->initialize(fine_tune_params);
+  register_database(dbname, new_db);
 
-  return inited_db;
+  return new_db;
 }
 
 common::Status Controller::new_standalone_database(
+    bool ismoving,
     const char* base_file_name,
     const char* metadata_path,
     const char* volumes_path,
     i32 num_volumes,
     u64 volume_size,
     bool allocate) {
-  auto status = StandaloneDatabase::new_database(base_file_name, metadata_path, volumes_path, num_volumes, volume_size, allocate);
+  auto status = StandaloneDatabase::new_database(ismoving, base_file_name, metadata_path, volumes_path, num_volumes, volume_size, allocate);
   if (!status.IsOk()) return status;
 
-  if (!set_config_database(base_file_name, metadata_path)) {
+  if (!set_config_database(ismoving, base_file_name, metadata_path)) {
     return common::Status::Internal();
   }
   return common::Status::Ok();
@@ -111,29 +119,30 @@ std::shared_ptr<Database> Controller::get_database(const std::string& db_name) {
   }
 }
 
-bool Controller::set_config_database(const char* dbname, const char* meta_path) {
+bool Controller::set_config_database(bool ismoving, const char* dbname, const char* meta_path) {
   std::stringstream insert;
-  insert << "INSERT INTO stdb_databases (dbname, metapath)" << std::endl;
-  insert << "\tVALUES ('" << dbname << "', '" << meta_path << "');" << std::endl;
+  insert << "INSERT INTO stdb_databases (dbname, metapath, ismoving)" << std::endl;
+  insert << "\tVALUES ('" << dbname << "', '" << meta_path << "', '" << (ismoving ? 1 : 0) << "');" << std::endl;
   std::string insert_query = insert.str();
   auto nrows = execute_query(insert_query);
   return nrows == 1;
 }
 
-bool Controller::get_config_database(const char* dbname, std::string* meta_path) {
+bool Controller::get_config_database(const char* dbname, std::string* meta_path, bool* ismoving) {
   std::stringstream query;
-  query << "SELECT metapath FROM stdb_databases WHERE dbname='" << dbname << "'";
+  query << "SELECT metapath, ismoving FROM stdb_databases WHERE dbname='" << dbname << "'";
   auto results = select_query(query.str().c_str());
   if (results.size() != 1) {
     LOG(INFO) << "Can't find stdb_databases parameter `" << dbname << "`";
     return false;
   }
   auto tuple = results.at(0);
-  if (tuple.size() != 1) {
+  if (tuple.size() != 2) {
     LOG(FATAL) << "Invalid configuration query (" << dbname << ")";
   }
   // This value can be encoded as dobule by the sqlite engine
   *meta_path = tuple.at(0);
+  *ismoving = boost::lexical_cast<i64>(tuple.at(1));
   return true;
 }
 
@@ -144,7 +153,8 @@ void Controller::create_tables() {
   query =
       "CREATE TABLE IF NOT EXISTS stdb_databases("
       "dbname TEXT UNIQUE,"
-      "metapath TEXT"
+      "metapath TEXT,"
+      "ismoving INTEGER"
       ");";
   execute_query(query);
 }
@@ -232,7 +242,7 @@ Controller::Controller() :
 
   apr_dbd_t *handle = nullptr;
 
-  auto db_path = common::GetHomeDir() + "/.stdbrc";
+  std::string db_path = common::GetHomeDir() + "/.stdbrc";
   status = apr_dbd_open(driver_, pool, db_path.c_str() , &handle);
   if (status != APR_SUCCESS) {
     LOG(FATAL) << "Can't open database, check file path:" << db_path;

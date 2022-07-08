@@ -33,15 +33,30 @@ class StandaloneDatabaseSession : public DatabaseSession {
 
   // Main functions.
   /*!
-   * Match series name. If series with such name doesn't exists - create it.
-   * This method should be called for each sample to init its `paramid` field.
+   * Init static location's IOT device.
+   * @param begin series's begin
+   * @param end series's end
+   * @param location series's location
+   * @param id The allocated series's id
+   * @return operation status
    */
-  common::Status init_series_id(const char* begin, const char* end, Sample* sample) override;
+  common::Status init_series_id(const char* begin, const char* end, const Location& location, u64* id) override;
 
+  /*!
+   * Init moving IOT device
+   * @param begin series's begin
+   * @param end series's end
+   * @param id The allocated series's id
+   * @return operation status
+   */
+  common::Status init_series_id(const char* begin, const char* end, u64* id) override;
+  
   /*!
    * get series name according to param id.
    */
-  common::Status get_series_name(ParamId id, char* buffer, size_t buffer_size) override;
+  int get_series_name(ParamId id, char* buffer, size_t buffer_size) override;
+
+  int get_series_name_and_location(ParamId id, char* buffer, size_t buffer_size, Location* location) override;
   
   /*!
    * write sample.

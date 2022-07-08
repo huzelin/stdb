@@ -13,12 +13,12 @@ cc_library(
     "worker_database.cc",
     "standalone_database.cc",
     "standalone_database_session.cc",
+    "cursor.cc",
 
     #"stdb.cc",
-    "cursor.cc",
-    "metadatastorage.cc",
-    "storage.cc",
-    "storage_api.cc",
+    #"metadatastorage.cc",
+    #"storage.cc",
+    #"storage_api.cc",
   ],
   hdrs = [
     "role.h",
@@ -31,12 +31,12 @@ cc_library(
     "standalone_database.h",
     "standalone_database_session.h",
     "sync_waiter.h",
+    "cursor.h",
 
     #"stdb.h",
-    "cursor.h",
-    "metadatastorage.h",
-    "storage.h",
-    "storage_api.h",
+    #"metadatastorage.h",
+    #"storage.h",
+    #"storage_api.h",
   ],
   alwayslink = 1,
   copts = [
@@ -56,25 +56,15 @@ cc_library(
   ],
 )
 
-cc_test(
-  name = "metadatastorage_test",
-  srcs = ["metadatastorage_test.cc"],
-  deps = [
-    "@gtest//:gtest",
-    "@gtest//:gtest_main",
-    ":core",
-  ],
-)
-
-cc_test(
-  name = "storage_test",
-  srcs = ["storage_test.cc"],
-  deps = [
-    "@gtest//:gtest",
-    "@gtest//:gtest_main",
-    ":core",
-  ],
-)
+#cc_test(
+#  name = "storage_test",
+#  srcs = ["storage_test.cc"],
+#  deps = [
+#    "@gtest//:gtest",
+#    "@gtest//:gtest_main",
+#    ":core",
+#  ],
+#)
 
 cc_test(
   name = "standalone_database_test",

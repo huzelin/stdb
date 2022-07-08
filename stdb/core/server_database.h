@@ -15,14 +15,40 @@ class ServerDatabase : public Database {
 
  public:
   // Create empty in-memmory meta database.
-  ServerDatabase();
+  explicit ServerDatabase(bool is_moving);
 
   // Open meta database.
-  ServerDatabase(const char* path, const FineTuneParams &params);
+  ServerDatabase(const char* path, const FineTuneParams &params, bool is_moving);
 
-  // Init series id, if return true, a new id created, else return false.
-  bool init_series_id(const char* begin, const char* end, Sample* sample, PlainSeriesMatcher* local_matcher,
-                      storage::InputLog* ilog, SyncWaiter* sync_waiter);
+  // Init series id, if a new id created return true else return false.
+  // @param begin The series string's begin
+  // @param end The series string's end
+  // @param sid The returned id
+  // @param local_matcher local matcher
+  // @param ilog The ilog
+  // @param sync_waiter sync waiter
+  bool init_series_id(const char* begin,
+                      const char* end,
+                      u64* sid,
+                      PlainSeriesMatcher* local_matcher,
+                      storage::InputLog* ilog,
+                      SyncWaiter* sync_waiter);
+
+  // Init series id, if a new id created return true else return false.
+  // @param begin The series string's begin
+  // @param end The series string's end
+  // @param location The series static location
+  // @param sid The returned id
+  // @param local_matcher local matcher
+  // @param ilog The ilog
+  // @param sync_waiter sync waiter 
+  bool init_series_id(const char* begin,
+                      const char* end,
+                      const Location& location,
+                      u64* sid,
+                      PlainSeriesMatcher* local_matcher,
+                      storage::InputLog* ilog,
+                      SyncWaiter* sync_waiter);
 
   // Get series name
   int get_series_name(ParamId id, char* buffer, size_t buffer_size, PlainSeriesMatcher *local_matcher);
@@ -39,11 +65,12 @@ class ServerDatabase : public Database {
   void sync() override;
 
   // Create empty database from scratch.
+  // @param is_moving If moving database
   // @param base_file_name is database name (excl suffix)
   // @param metadata_path is a path to metadata storage
   // @param bstore_type is the bstore type.
   // @return operation status
-  static common::Status new_database(const char* base_file_name, const char* metadata_path, const char* bstore_type);
+  static common::Status new_database(bool is_moving, const char* base_file_name, const char* metadata_path, const char* bstore_type);
 
   // Remove existing database
   // @param file_name is a database name

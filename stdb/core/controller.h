@@ -28,6 +28,7 @@ class Controller : public common::Singleton<Controller> {
 
   std::shared_ptr<Database> open_standalone_database(const char* dbname);
   common::Status new_standalone_database(
+      bool ismoving,
       const char* dbname,
       const char* metadata_path,
       const char* volumes_path,
@@ -51,8 +52,8 @@ class Controller : public common::Singleton<Controller> {
   void sync_action();
   std::vector<std::shared_ptr<Database>> get_alldatabases();
 
-  bool set_config_database(const char* dbname, const char* meta_path);
-  bool get_config_database(const char* dbname, std::string* meta_path);
+  bool set_config_database(bool ismoving, const char* dbname, const char* meta_path);
+  bool get_config_database(const char* dbname, std::string* meta_path, bool* ismoving);
 
   void create_tables();
   

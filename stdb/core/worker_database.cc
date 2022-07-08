@@ -45,15 +45,20 @@ static apr_status_t create_metadata_page(
   return APR_SUCCESS;
 }
 
-WorkerDatabase::WorkerDatabase(std::shared_ptr<Synchronization> synchronization) {
+WorkerDatabase::WorkerDatabase(std::shared_ptr<Synchronization> synchronization, bool is_moving)
+  : Database(is_moving) {
   metadata_.reset(new WorkerMetaStorage(":memory:", synchronization));
 
   bstore_ = storage::BlockStoreBuilder::create_memstore();
   cstore_ = std::make_shared<storage::ColumnStore>(bstore_);
 }
 
-WorkerDatabase::WorkerDatabase(const char* path, const FineTuneParams& params,
-                               std::shared_ptr<Synchronization> synchronization) {
+WorkerDatabase::WorkerDatabase(
+    const char* path,
+    const FineTuneParams& params,
+    std::shared_ptr<Synchronization> synchronization,
+    bool is_moving)
+  : Database(is_moving) {
   metadata_.reset(new WorkerMetaStorage(path, synchronization));
 
   std::string bstore_type = "FixedSizeFileStorage";
@@ -121,7 +126,8 @@ void WorkerDatabase::close_specific_columns(const std::vector<u64>& ids) {
   }
 }
 
-common::Status WorkerDatabase::new_database(const char* base_file_name,
+common::Status WorkerDatabase::new_database(bool is_moving,
+                                            const char* base_file_name,
                                             const char* metadata_path,
                                             const char* volumes_path,
                                             i32 num_volumes,

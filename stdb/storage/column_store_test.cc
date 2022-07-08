@@ -7,7 +7,7 @@
 #include <sqlite3.h>
 
 #include "stdb/common/logging.h"
-#include "stdb/core/metadatastorage.h"
+// #include "stdb/core/metadatastorage.h"
 #include "stdb/storage/column_store.h"
 #include "stdb/query/queryplan.h"
 
@@ -16,6 +16,7 @@
 namespace stdb {
 namespace storage {
 
+/*
 struct Initializer {
   Initializer() {
     sqlite3_initialize();
@@ -31,14 +32,16 @@ struct Initializer {
 };
 
 static Initializer initializer;
+*/
 using namespace stdb::qp;
 
+/*
 std::unique_ptr<MetadataStorage> create_metadatastorage() {
   // Create in-memory sqlite database.
   std::unique_ptr<MetadataStorage> meta;
   meta.reset(new MetadataStorage(":memory:"));
   return meta;
-}
+}*/
 
 std::shared_ptr<ColumnStore> create_cstore() {
   std::shared_ptr<BlockStore> bstore = BlockStoreBuilder::create_memstore();
@@ -59,7 +62,7 @@ TEST(TestColumnStore, Test_columns_store_create_1) {
 }
 
 TEST(TestColumnStore, Test_column_store_add_values_3) {
-  auto meta = create_metadatastorage();
+  // auto meta = create_metadatastorage();
   auto bstore = BlockStoreBuilder::create_memstore();
   auto cstore = create_cstore();
   auto sessiona = create_session(cstore);
