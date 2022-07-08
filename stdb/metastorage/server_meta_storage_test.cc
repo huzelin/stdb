@@ -42,7 +42,7 @@ TEST(TestServerMetaStorage, Test2) {
   std::string series = "size city=beijing color=red";
   storage.sync_with_metadata_storage(
       [&](std::vector<ServerMetaStorage::SeriesT>* items, std::vector<Location>* locations) {
-        for (auto i = 0; i < 1024; ++i) {
+        for (auto i = 0; i < 64; ++i) {
           items->push_back(std::make_tuple(series.c_str(), series.size(), i + 1));
           Location location = { 120.00 + i * 0.001, 30.00 + i * 0.001 };
           locations->push_back(location);
