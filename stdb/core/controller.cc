@@ -52,7 +52,7 @@ std::shared_ptr<Database> Controller::open_standalone_database(const char* dbnam
 
   std::string server_path = metadata_path + "/server/" + dbname + ".stdb";
   std::string worker_path = metadata_path + "/worker/" + dbname + ".stdb";
-  std::string input_log_path = metadata_path + "/inputlog/";
+  std::string input_log_path = metadata_path + "/inputlog/" + dbname;
 
   FineTuneParams fine_tune_params;
   fine_tune_params.input_log_path = input_log_path.c_str();
@@ -78,7 +78,8 @@ common::Status Controller::new_standalone_database(
     i32 num_volumes,
     u64 volume_size,
     bool allocate) {
-  auto status = StandaloneDatabase::new_database(ismoving, base_file_name, metadata_path, volumes_path, num_volumes, volume_size, allocate);
+  auto status = StandaloneDatabase::new_database(
+      ismoving, base_file_name, metadata_path, volumes_path, num_volumes, volume_size, allocate);
   if (!status.IsOk()) return status;
 
   if (!set_config_database(ismoving, base_file_name, metadata_path)) {
@@ -226,7 +227,9 @@ Controller::Controller() :
     driver_(nullptr),
     handle_(nullptr, AprHandleDeleter(nullptr)),
     done_(0),
-    close_barrier_(2) {
+    close_barrier_(2) { }
+
+void Controller::init(const char* config_path) {
   apr_pool_t *pool = nullptr;
   auto status = apr_pool_create(&pool, NULL);
   if (status != APR_SUCCESS) {

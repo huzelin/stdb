@@ -10,6 +10,7 @@ namespace stdb {
 TEST(TestController, Test1) {
   initialize();
   auto controller = Controller::Get();
+  controller->init("/tmp/.stdbrc");
 }
 
 TEST(TestController, Test2) {
@@ -22,7 +23,6 @@ TEST(TestController, Test2) {
       2,
       1024 * 1024,
       true);
-  return;
 
   auto database = controller->open_standalone_database("test1");
   {
