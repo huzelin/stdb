@@ -37,7 +37,7 @@ namespace stdb {
   * It's more efficient than PlainSeriesMatcher but it's costly to have
   * many instances in one application.
   */
-struct SeriesMatcher : SeriesMatcherBase {
+struct SeriesMatcher : public SeriesMatcherBase {
   //! Series name descriptor - pointer to string, length, series id.
   // typedef std::tuple<const char*, int, i64> SeriesNameT;
 
@@ -63,21 +63,11 @@ struct SeriesMatcher : SeriesMatcherBase {
 
   void _add_pending(const std::string& series, i64 id);
 
-  /** Add value to matcher. This function should be
-   * used only to load data to matcher. Internal
-   * `series_id` counter wouldn't be affected by this call, so
-   * it should be set up propertly in constructor.
-   */
   void _add(const std::string& series, i64 id) override;
-  void _add(const std::string& series, i64 id, const Location& location) override;
+  void _add(const std::string& series, const Location& location, i64 id) override;
 
-  /** Add value to matcher. This function should be
-   * used only to load data to matcher. Internal
-   * `series_id` counter wouldn't be affected by this call, so
-   * it should be set up propertly in constructor.
-   */
   void _add(const char* begin, const char* end, i64 id) override;
-  void _add(const char* begin, const char* end, i64 id, const Location& location) override;
+  void _add(const char* begin, const char* end, const Location& location, i64 id) override;
 
   /**
    * Match string and return it's id. If string is new return 0.

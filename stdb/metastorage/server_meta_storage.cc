@@ -280,7 +280,7 @@ common::Status ServerMetaStorage::load_matcher_data(SeriesMatcher& matcher) {
         Location location;
         location.lon = boost::lexical_cast<LocationType>(row.at(2));
         location.lat = boost::lexical_cast<LocationType>(row.at(3));
-        matcher._add(series, id, location);
+        matcher._add(series, location, id);
       }
     }
   } catch(...) {
