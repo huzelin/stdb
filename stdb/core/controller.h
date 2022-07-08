@@ -22,6 +22,7 @@ namespace stdb {
 class Controller : public common::Singleton<Controller> {
  public:
   Controller();
+  void init(const char* config_path);
 
   void set_role(Role role) { role_ = role; }
   Role role() const { return role_; }
