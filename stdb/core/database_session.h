@@ -14,8 +14,7 @@ class DatabaseSession {
  public:
   virtual ~DatabaseSession() { }
 
-  /*!
-   * Init static location's IOT device.
+  /* Init static location's IOT device.
    * @param begin series's begin
    * @param end series's end
    * @param location series's location
@@ -24,8 +23,7 @@ class DatabaseSession {
    */
   virtual common::Status init_series_id(const char* begin, const char* end, const Location& location, u64* id) = 0;
 
-  /*!
-   * Init moving IOT device
+  /* Init moving IOT device
    * @param begin series's begin
    * @param end series's end
    * @param id The allocated series's id
@@ -33,8 +31,11 @@ class DatabaseSession {
    */
   virtual common::Status init_series_id(const char* begin, const char* end, u64* id) = 0;
 
-  /*!
-   * get series name according to param id.
+  /* Get series name according to param id.
+   * @param id The series's id
+   * @param buffer The buffer address
+   * @param buffer_size The buffer size
+   * @return Return the series's length of name
    */
   virtual int get_series_name(ParamId id, char* buffer, size_t buffer_size) = 0;
 
