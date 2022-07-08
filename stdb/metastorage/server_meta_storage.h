@@ -37,28 +37,32 @@ struct ServerMetaStorage : public MetaStorage {
   /** Create new or open existing db.
    * @throw std::runtime_error in a case of error
    */
-  ServerMetaStorage(const char* db);
+  ServerMetaStorage(const char* db, bool is_moving);
 
   /** Read larges series id */
   boost::optional<i64> get_prev_largest_id();
 
   /** load matcher data into SeriesMatcherBase */
-  common::Status load_matcher_data(SeriesMatcherBase &matcher);
+  common::Status load_matcher_data(SeriesMatcher &matcher);
 
   // Synchronization
+  void sync_with_metadata_storage(std::function<void(std::vector<SeriesT>*)> pull_new_series);
   void sync_with_metadata_storage(std::function<void(std::vector<SeriesT>*, std::vector<Location>*)> pull_new_series);
 
  private:
   /** Add new series to the metadata storage (generate sql query and execute it). */
   void insert_new_series(std::vector<SeriesT>&& items, std::vector<Location>&& locations);
 
+  /** Add new series to the metadata storage */
+  void insert_new_series(std::vector<SeriesT>&& items);
+
   /** Create tables if database is empty
    * @throw std::runtime_error in a case of error
    */
   void create_server_tables();
 
-  PreparedT insert_;
-
+  // is moving
+  bool is_moving_;
   // Synchronization
   mutable std::mutex tran_lock_;
 };

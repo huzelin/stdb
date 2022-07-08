@@ -140,6 +140,7 @@ struct StringTools {
   typedef MapClass<StringT, L2TableTPtr, StringTools::Hash, StringTools::EqualTo> L3TableT;
   typedef std::shared_ptr<L3TableT> L3TableTPtr;
   typedef MapClass<i64, StringT>      InvT;
+  // typedef MapClass<i64, std::tuple<StringT, Location>> InvT;
 
   static TableT create_table(size_t size);
   static TableTPtr create_table_ptr(size_t size);

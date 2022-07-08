@@ -137,7 +137,7 @@ inline std::string GetHomeDir() {
   if (ptr) {
     return std::string(ptr);
   } else {
-    return "/home/stdb/";
+    return "./";
   }
 }
 

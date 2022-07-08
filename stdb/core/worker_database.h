@@ -20,10 +20,11 @@ class WorkerDatabase : public Database {
 
  public:
   // Create empty in-memory database
-  WorkerDatabase(std::shared_ptr<Synchronization> synchronization);
+  WorkerDatabase(std::shared_ptr<Synchronization> synchronization, bool is_moving);
 
   WorkerDatabase(const char* path, const FineTuneParams &params,
-                 std::shared_ptr<Synchronization> synchronization);
+                 std::shared_ptr<Synchronization> synchronization,
+                 bool is_moving);
 
   // Return cstore
   std::shared_ptr<storage::ColumnStore> cstore() const { return cstore_; }
@@ -46,6 +47,7 @@ class WorkerDatabase : public Database {
   void close_specific_columns(const std::vector<u64>& ids);
 
   /* Create empty database from scratch.
+   * @param is_moving If moving database
    * @param base_file_name is database name (excl suffix)
    * @param metadata_path is a path to metadata storage
    * @param volumes_path is a path to volumes storage
@@ -53,7 +55,8 @@ class WorkerDatabase : public Database {
    * @param volume_size is a size of the volume in bytes
    * @return operation status
    */
-  static common::Status new_database(const char* base_file_name,
+  static common::Status new_database(bool is_moving,
+                                     const char* base_file_name,
                                      const char* metadata_path,
                                      const char* volumes_path,
                                      i32 num_volumes,

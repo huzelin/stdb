@@ -26,29 +26,41 @@
 
 namespace stdb {
 
-ServerMetaStorage::ServerMetaStorage(const char* db) : MetaStorage(db) {
+ServerMetaStorage::ServerMetaStorage(const char* db, bool is_moving)
+    : MetaStorage(db), is_moving_(is_moving) {
   create_server_tables();
 
+  /*
   // Create prepared statement
   const char* query = "INSERT INTO stdb_series (series_id, keyslist, storage_id, lon, lat) VALUES (%s, %s, %d, %f, %f)";
   auto status = apr_dbd_prepare(driver_, pool_.get(), handle_.get(), query, "INSERT_SERIES_NAME", &insert_);
   if (status != 0) {
     LOG(ERROR) << "Error creating prepared statement";
     LOG(FATAL) << apr_dbd_error(driver_, handle_.get(), status);
-  }
+  }*/
 }
 
 void ServerMetaStorage::create_server_tables() {
   const char* query = nullptr;
-  query =
-      "CREATE TABLE IF NOT EXISTS stdb_series("
-      "id INTEGER PRIMARY KEY UNIQUE,"
-      "series_id TEXT,"
-      "keyslist TEXT,"
-      "storage_id INTEGER UNIQUE,"
-      "lon REAL,"
-      "lat REAL"
-      ");";
+  if (is_moving_) {
+    query =
+        "CREATE TABLE IF NOT EXISTS stdb_series("
+        "id INTEGER PRIMARY KEY UNIQUE,"
+        "series_id TEXT,"
+        "keyslist TEXT,"
+        "storage_id INTEGER UNIQUE"
+        ");";
+  } else {
+    query =
+        "CREATE TABLE IF NOT EXISTS stdb_series("
+        "id INTEGER PRIMARY KEY UNIQUE,"
+        "series_id TEXT,"
+        "keyslist TEXT,"
+        "storage_id INTEGER UNIQUE,"
+        "lon REAL,"
+        "lat REAL"
+        ");";
+  }
   execute_query(query);
 }
 
@@ -75,13 +87,32 @@ boost::optional<i64> ServerMetaStorage::get_prev_largest_id() {
 }
 
 void ServerMetaStorage::sync_with_metadata_storage(
+    std::function<void(std::vector<SeriesT>*)> pull_new_series) {
+  std::vector<SeriesMatcher::SeriesNameT>           newnames;
+
+  pull_new_series(&newnames);
+  if (newnames.empty()) return;
+
+  std::unique_lock<std::mutex> lock(tran_lock_);
+
+  // Save new series
+  begin_transaction();
+  
+  insert_new_series(std::move(newnames));
+
+  end_transaction();
+}
+
+void ServerMetaStorage::sync_with_metadata_storage(
     std::function<void(std::vector<SeriesT>*, std::vector<Location>*)> pull_new_series) {
   // Make temporary copies under the lock
-  std::vector<PlainSeriesMatcher::SeriesNameT>           newnames;
+  std::vector<SeriesMatcher::SeriesNameT>           newnames;
   std::vector<Location>                 locations;
   
   pull_new_series(&newnames, &locations);
-  if (newnames.empty()) return;
+  if (newnames.empty() || newnames.size() != locations.size()) {
+    return;
+  }
 
   // This lock is needed to prevent race condition during log replay.
   // When log replay completes, recovery procedure have to start synchronization
@@ -94,7 +125,7 @@ void ServerMetaStorage::sync_with_metadata_storage(
 
   // Save new series
   begin_transaction();
-
+  
   insert_new_series(std::move(newnames), std::move(locations));
 
   end_transaction();
@@ -134,6 +165,45 @@ static bool split_series(const char* str, int n, LightweightString* outname, Lig
   outkeys->str = str;
   outkeys->len = end - str;
   return true;
+}
+
+void ServerMetaStorage::insert_new_series(std::vector<SeriesT>&& items) {
+  if (items.empty()) {
+    return;
+  }
+  std::stringstream query;
+  while (!items.empty()) {
+    const size_t batchsize = 500; // This limit is defined by SQLITE_MAX_COMPOUND_SELECT
+    const size_t newsize = items.size() > batchsize ? items.size() - batchsize : 0;
+    std::vector<MetaStorage::SeriesT> batch(items.begin() + static_cast<ssize_t>(newsize), items.end());
+    items.resize(newsize);
+
+    query << "INSERT INTO stdb_series (series_id, keyslist, storage_id)" << std::endl;
+    bool first = true;
+    for (size_t i = 0; i < batch.size(); ++i) {
+      auto& item = batch[i];
+      LightweightString name, keys;
+      auto stid = std::get<2>(item);
+      if (split_series(std::get<0>(item), std::get<1>(item), &name, &keys)) {
+        if (first) {
+          query << "\tSELECT '" << name << "' as series_id, '"
+              << keys << "' as keyslist, "
+              << stid << "  as storage_id"
+              << std::endl;
+          first = false;
+        } else {
+          query << "\tUNION "
+              <<   "SELECT '" << name << "', '"
+              << keys << "', "
+              << stid
+              << std::endl;
+        }
+      }
+    }
+    query << ";\n";
+  }
+  std::string full_query = query.str();
+  execute_query(full_query);
 }
 
 void ServerMetaStorage::insert_new_series(std::vector<SeriesT> &&items, std::vector<Location>&& locations) {
@@ -186,21 +256,32 @@ void ServerMetaStorage::insert_new_series(std::vector<SeriesT> &&items, std::vec
   execute_query(full_query);
 }
 
-common::Status ServerMetaStorage::load_matcher_data(SeriesMatcherBase& matcher) {
-  auto query = "SELECT series_id || ' ' || keyslist, storage_id, lon, lat FROM stdb_series;";
+common::Status ServerMetaStorage::load_matcher_data(SeriesMatcher& matcher) {
+  const char* query = nullptr;
+  if (is_moving_) {
+    query = "SELECT series_id || ' ' || keyslist, storage_id FROM stdb_series;";
+  } else {
+    query = "SELECT series_id || ' ' || keyslist, storage_id, lon, lat FROM stdb_series;";
+  }
   try {
     auto results = select_query(query);
     LOG(INFO) << "load matcher data size=" << results.size();
     for(auto row: results) {
-      if (row.size() != 4) {
-        continue;
+      if (is_moving_) {
+        if (row.size() != 2) continue;
+      } else {
+        if (row.size() != 4) continue;
       }
       auto series = row.at(0);
       auto id = boost::lexical_cast<i64>(row.at(1));
-      Location location;
-      location.lon = boost::lexical_cast<LocationType>(row.at(2));
-      location.lat = boost::lexical_cast<LocationType>(row.at(3));
-      matcher._add(series, id, location);
+      if (is_moving_) {
+        matcher._add(series, id);
+      } else {
+        Location location;
+        location.lon = boost::lexical_cast<LocationType>(row.at(2));
+        location.lat = boost::lexical_cast<LocationType>(row.at(3));
+        matcher._add(series, id, location);
+      }
     }
   } catch(...) {
     LOG(ERROR) << boost::current_exception_diagnostic_information().c_str();

@@ -23,6 +23,7 @@ class WorkerRecoveryVisitor;
 
 class Database {
  protected:
+  bool is_moving_ = false;
   std::shared_ptr<storage::ShardedInputLog> inputlog_;
   std::string input_log_path_;
 
@@ -30,6 +31,8 @@ class Database {
   bool wal_recovery_is_enabled(const FineTuneParams &params, int* ccr);
 
  public:
+  explicit Database(bool is_moving) : is_moving_(is_moving) { }
+
   // Get current input log
   storage::InputLog* get_input_log();
 
@@ -39,6 +42,8 @@ class Database {
   // Return inputlog related.
   std::shared_ptr<storage::ShardedInputLog> inputlog() const { return inputlog_; }
   const std::string& input_log_path() const { return input_log_path_; }
+
+  bool is_moving() const { return is_moving_; }
 
   // Initialize database, run recovery and initializa inputlog
   virtual void initialize(const FineTuneParams& params);
