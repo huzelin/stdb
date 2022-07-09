@@ -1,10 +1,10 @@
 /*!
  * \file group_aggregate_filter_processing_step.h
  */
-#ifndef STDB_QUERY_PLAN_GROUP_AGGREGATE_FILTER_PROCESSING_STEP_H_
-#define STDB_QUERY_PLAN_GROUP_AGGREGATE_FILTER_PROCESSING_STEP_H_
+#ifndef STDB_QUERY_STEPS_GROUP_AGGREGATE_FILTER_PROCESSING_STEP_H_
+#define STDB_QUERY_STEPS_GROUP_AGGREGATE_FILTER_PROCESSING_STEP_H_
 
-#include "stdb/query/plan/group_aggregate_processing_step.h"
+#include "stdb/query/steps/group_aggregate_processing_step.h"
 
 namespace stdb {
 namespace qp {
@@ -77,4 +77,4 @@ struct GroupAggregateFilterProcessingStep : ProcessingPrelude {
 }  // namespace qp
 }  // namespace stdb
 
-#endif  // STDB_QUERY_PLAN_GROUP_AGGREGATE_FILTER_PROCESSING_STEP_H_
+#endif  // STDB_QUERY_STEPS_GROUP_AGGREGATE_FILTER_PROCESSING_STEP_H_

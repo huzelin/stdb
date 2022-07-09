@@ -1,10 +1,10 @@
 /*!
  * \file aggregate_combiner.h
  */
-#ifndef STDB_QUERY_PLAN_AGGREGATE_COMBINER_H_
-#define STDB_QUERY_PLAN_AGGREGATE_COMBINER_H_
+#ifndef STDB_QUERY_STEPS_AGGREGATE_COMBINER_H_
+#define STDB_QUERY_STEPS_AGGREGATE_COMBINER_H_
 
-#include "stdb/query/plan/materialization_step.h"
+#include "stdb/query/steps/materialization_step.h"
 
 namespace stdb {
 namespace qp {
@@ -73,4 +73,4 @@ struct AggregateCombiner : MaterializationStep {
 }  // namespace qp
 }  // namespace stdb
 
-#endif  // STDB_QUERY_PLAN_AGGREGATE_COMBINER_H_
+#endif  // STDB_QUERY_STEPS_AGGREGATE_COMBINER_H_

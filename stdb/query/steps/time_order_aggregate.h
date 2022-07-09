@@ -1,30 +1,27 @@
 /*!
- * \file series_order_aggregate.h
+ * \file time_order_aggregate.h
  */
-#ifndef STDB_QUERY_PLAN_SERIES_ORDER_AGGREGATER_H_
-#define STDB_QUERY_PLAN_SERIES_ORDER_AGGREGATER_H_
+#ifndef STDB_QUERY_STEPS_TIME_ORDER_AGGREGATER_H_
+#define STDB_QUERY_STEPS_TIME_ORDER_AGGREGATER_H_
 
-#include "stdb/query/plan/materialization_step.h"
+#include "stdb/query/steps/processing_prelude.h"
 
 namespace stdb {
 namespace qp {
 
-/**
- * Merges several group-aggregate operators by chaining
- */
-struct SeriesOrderAggregate : MaterializationStep {
+struct TimeOrderAggregate : MaterializationStep {
   std::vector<ParamId> ids_;
   std::vector<AggregationFunction> fn_;
   std::unique_ptr<ColumnMaterializer> mat_;
 
-  template <class IdVec, class FnVec>
-  SeriesOrderAggregate(IdVec&& vec, FnVec&& fn) :
+  template<class IdVec, class FnVec>
+  TimeOrderAggregate(IdVec&& vec, FnVec&& fn) :
       ids_(std::forward<IdVec>(vec)),
       fn_(std::forward<FnVec>(fn)) { }
 
-  boost::property_tree::ptree debug_info() const override {
+  boost::property_tree::ptree debug_info() const {
     boost::property_tree::ptree tree;
-    tree.add("name", "SeriesOrderAggregate");
+    tree.add("name", "TimeOrderAggregate");
     return tree;
   }
 
@@ -34,7 +31,7 @@ struct SeriesOrderAggregate : MaterializationStep {
     if (status != common::Status::Ok()) {
       return status;
     }
-    mat_.reset(new SeriesOrderAggregateMaterializer(std::move(ids_), std::move(iters), fn_));
+    mat_.reset(new TimeOrderAggregateMaterializer(ids_, iters, fn_));
     return common::Status::Ok();
   }
 
@@ -50,4 +47,4 @@ struct SeriesOrderAggregate : MaterializationStep {
 }  // namespace qp
 }  // namespace stdb
 
-#endif  // STDB_QUERY_PLAN_SERIES_ORDER_AGGREGATER_H_
+#endif  // STDB_QUERY_STEPS_TIME_ORDER_AGGREGATER_H_

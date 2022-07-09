@@ -1,10 +1,10 @@
 /*!
  * \file chain.h
  */
-#ifndef STDB_QUERY_PLAN_CHAIN_H_
-#define STDB_QUERY_PLAN_CHAIN_H_
+#ifndef STDB_QUERY_STEPS_CHAIN_H_
+#define STDB_QUERY_STEPS_CHAIN_H_
 
-#include "stdb/query/plan/materialization_step.h"
+#include "stdb/query/steps/materialization_step.h"
 
 namespace stdb {
 namespace qp {
@@ -63,4 +63,4 @@ struct Chain : MaterializationStep {
 }  // namespace qp
 }  // namespace stdb
 
-#endif  // STDB_QUERY_PLAN_CHAIN_H_
+#endif  // STDB_QUERY_STEPS_CHAIN_H_

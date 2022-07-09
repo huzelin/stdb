@@ -1,10 +1,10 @@
 /*!
  * \file join.h
  */
-#ifndef STDB_QUERY_PLAN_JOIN_H_
-#define STDB_QUERY_PLAN_JOIN_H_
+#ifndef STDB_QUERY_STEPS_JOIN_H_
+#define STDB_QUERY_STEPS_JOIN_H_
 
-#include "stdb/query/plan/materialization_step.h"
+#include "stdb/query/steps/materialization_step.h"
 
 namespace stdb {
 namespace qp {
@@ -84,4 +84,4 @@ struct Join : MaterializationStep {
 }  // namespace qp
 }  // namespace stdb
 
-#endif  // STDB_QUERY_PLAN_JOIN_H_
+#endif  // STDB_QUERY_STEPS_JOIN_H_

@@ -1,10 +1,10 @@
 /*!
  * \file materialization_step.h
  */
-#ifndef STDB_QUERY_PLAN_MATERIALIZATION_STEP_H_
-#define STDB_QUERY_PLAN_MATERIALIZATION_STEP_H_
+#ifndef STDB_QUERY_STEPS_MATERIALIZATION_STEP_H_
+#define STDB_QUERY_STEPS_MATERIALIZATION_STEP_H_
 
-#include "stdb/query/plan/processing_prelude.h"
+#include "stdb/query/steps/processing_prelude.h"
 
 namespace stdb {
 namespace qp {
@@ -33,4 +33,4 @@ struct MaterializationStep {
 }  // namespace qp
 }  // namespace stdb
 
-#endif  // STDB_QUERY_PLAN_MATERIALIZATION_STEP_H_
+#endif  // STDB_QUERY_STEPS_MATERIALIZATION_STEP_H_

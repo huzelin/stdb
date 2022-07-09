@@ -1,8 +1,8 @@
 /*!
  * \file processing_prelude.h
  */
-#ifndef STDB_QUERY_PLAN_PROCESSING_PRELUDE_H_
-#define STDB_QUERY_PLAN_PROCESSING_PRELUDE_H_
+#ifndef STDB_QUERY_STEPS_PROCESSING_PRELUDE_H_
+#define STDB_QUERY_STEPS_PROCESSING_PRELUDE_H_
 
 #include "stdb/storage/nbtree.h"
 #include "stdb/storage/column_store.h"
@@ -37,4 +37,4 @@ struct ProcessingPrelude {
 }  // namespace qp
 }  // namespace stdb
 
-#endif  // STDB_QUERY_PLAN_PROCESSING_PRELUDE_H_
+#endif  // STDB_QUERY_STEPS_PROCESSING_PRELUDE_H_

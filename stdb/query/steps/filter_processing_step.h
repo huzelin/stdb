@@ -1,10 +1,10 @@
 /*!
  * \file filter_processing_step.h
  */
-#ifndef STDB_QUERY_PLAN_FILTER_PROCESSING_STEP_H_
-#define STDB_QUERY_PLAN_FILTER_PROCESSING_STEP_H_
+#ifndef STDB_QUERY_STEPS_FILTER_PROCESSING_STEP_H_
+#define STDB_QUERY_STEPS_FILTER_PROCESSING_STEP_H_
 
-#include "stdb/query/plan/processing_prelude.h"
+#include "stdb/query/steps/processing_prelude.h"
 
 namespace stdb {
 namespace qp {
@@ -74,4 +74,4 @@ struct FilterProcessingStep : ProcessingPrelude {
 }  // namespace qp
 }  // namespace stdb
 
-#endif  // STDB_QUERY_PLAN_FILTER_PROCESSING_STEP_H_
+#endif  // STDB_QUERY_STEPS_FILTER_PROCESSING_STEP_H_
