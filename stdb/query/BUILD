@@ -7,8 +7,9 @@ cc_library(
   name = "query",
   srcs = [
     "queryparser.cc",
-    "queryplan.cc",
     "queryprocessor.cc",
+    "plan/query_plan.cc",
+    "plan/query_plan_builder.cc",
     "queryprocessor_framework.cc",
     "query_processing/absolute.cc", 
     "query_processing/eval.cc", 
@@ -23,7 +24,6 @@ cc_library(
   ],
   hdrs = [
     "queryparser.h",
-    "queryplan.h",
     "external_cursor.h",
     "internal_cursor.h",
     "queryprocessor.h",
@@ -38,6 +38,9 @@ cc_library(
     "query_processing/sliding_window.h",
     "query_processing/spacesaver.h",
     "query_processing/top.h",
+    "plan/query_plan_builder.h",
+    "plan/query_plan.h",
+    "plan/two_step_query_plan.h",
 
     "steps/aggregate_combiner.h",
     "steps/aggregate.h",
@@ -72,8 +75,8 @@ cc_library(
 )
 
 cc_test(
-  name = "queryplan_test",
-  srcs = ["queryplan_test.cc"],
+  name = "query_plan_builder_test",
+  srcs = ["plan/query_plan_builder_test.cc"],
   deps = [
     "@gtest//:gtest",
     "@gtest//:gtest_main",
