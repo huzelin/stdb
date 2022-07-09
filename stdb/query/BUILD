@@ -41,7 +41,6 @@ cc_library(
     "plan/query_plan_builder.h",
     "plan/query_plan.h",
     "plan/two_step_query_plan.h",
-
     "steps/aggregate_combiner.h",
     "steps/aggregate.h",
     "steps/aggregate_processing_step.h",
