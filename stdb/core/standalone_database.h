@@ -5,6 +5,7 @@
 #define STDB_CORE_STANDALONE_DATABASE_H_
 
 #include "stdb/core/server_database.h"
+#include "stdb/core/standalone_database_session.h"
 #include "stdb/core/worker_database.h"
 
 namespace stdb {
@@ -41,6 +42,10 @@ class StandaloneDatabase : public Database, public std::enable_shared_from_this<
   void sync() override;
   // create write session
   std::shared_ptr<DatabaseSession> create_session() override;
+
+  void query(StandaloneDatabaseSession* session, InternalCursor* cursor, const char* query);
+  void suggest(StandaloneDatabaseSession* session, InternalCursor* cursor, const char* query);
+  void search(StandaloneDatabaseSession* session, InternalCursor* cursor, const char* query);
 
   /* Create empty database from scratch.
    * @param ismoving If is moving database

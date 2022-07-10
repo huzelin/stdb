@@ -41,14 +41,25 @@ class DatabaseSession {
 
   /*!
    * get series name and location
+   * @param id The series' id
+   * @param buffer The buffer address
+   * @param buffer_size The buffer size
+   * @param location The series's location
    */
   virtual int get_series_name_and_location(ParamId id, char* buffer, size_t buffer_size, Location* location) = 0;
   
   /*!
    * write sample.
+   * @param sample The sample
+   * @return The write status
    */
   virtual common::Status write(const Sample& sample) = 0;
 
+  /*!
+   * spatial and temporal query
+   * @cursor The query result's cursor
+   * @query The query string 
+   */
   virtual void query(InternalCursor* cursor, const char* query) = 0;
 
   /**

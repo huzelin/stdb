@@ -24,8 +24,8 @@ void QueryPlanExecutor::execute(
     // This is OK because normal query (aggregate or select) will write fixed size samples with size = sizeof(Sample).
     //
     std::tie(status, size) = iter->read(reinterpret_cast<u8*>(dest.data()), dest_size);
-    if (status != common::Status::Ok() &&
-        (status != common::Status::NoData() && status != common::Status::Unavailable())) {
+    if (!status.IsOk() &&
+        (status.Code() != common::Status::kNoData && status.Code() != common::Status::kUnavailable)) {
       LOG(ERROR) << "Iteration error " << status.ToString();
       qproc.set_error(status);
       return;

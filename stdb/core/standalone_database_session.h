@@ -53,16 +53,33 @@ class StandaloneDatabaseSession : public DatabaseSession {
   
   /*!
    * get series name according to param id.
+   * @param id The series's id
+   * @param buffer The buffer address
+   * @param buffer_size The buffer size
    */
   int get_series_name(ParamId id, char* buffer, size_t buffer_size) override;
 
+  /*!
+   * get series name and location according to param id
+   * @param id The series's id
+   * @buffer The buffer address for series name
+   * @buffer_size The buffer size
+   * @param location The series location
+   */
   int get_series_name_and_location(ParamId id, char* buffer, size_t buffer_size, Location* location) override;
   
   /*!
    * write sample.
+   * @param sample The sample to write
+   * @return write status
    */
   common::Status write(const Sample& sample) override;
 
+  /*!
+   * @brief query implementation
+   * @param cursor is a pointer to internal cursor
+   * @param query is a string that contains query
+   */
   void query(InternalCursor* cursor, const char* query) override;
 
   /**

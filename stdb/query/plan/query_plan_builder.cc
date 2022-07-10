@@ -609,6 +609,7 @@ std::tuple<common::Status, std::unique_ptr<IQueryPlan>> QueryPlanBuilder::create
     return scan_events_query_plan(req);
   }
   // Select metrics
+  LOG(INFO) << "scan query plan";
   return scan_query_plan(req);
 }
 

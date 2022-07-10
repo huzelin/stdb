@@ -64,11 +64,5 @@ TEST(TestQueryPlan, Test_make_scan_query) {
   LOG(INFO) << "query plan debug_string:" << to_json(query_plan->debug_info());
 }
 
-TEST(TestQueryPlan, Test_2) {
-  init_series_matcher();
-
-
-}
-
 }  // namespace qp
 }  // namespace stdb

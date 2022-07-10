@@ -160,15 +160,15 @@ common::Status StandaloneDatabaseSession::write(const Sample& sample) {
 }
 
 void StandaloneDatabaseSession::query(InternalCursor* cursor, const char* query) {
-
+  database_->query(this, cursor, query);
 }
 
 void StandaloneDatabaseSession::suggest(InternalCursor* cursor, const char* query) {
-
+  database_->query(this, cursor, query);
 }
 
 void StandaloneDatabaseSession::search(InternalCursor* cursor, const char* query) {
-
+  database_->query(this, cursor, query);
 }
 
 }  // namespace stdb
