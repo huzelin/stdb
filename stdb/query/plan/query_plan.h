@@ -1,8 +1,8 @@
 /*!
- * \file queryplan.h
+ * \file query_plan.h
  */
-#ifndef STDB_QUERY_QUERY_PLAN_H_
-#define STDB_QUERY_QUERY_PLAN_H_
+#ifndef STDB_QUERY_PLAN_QUERY_PLAN_H_
+#define STDB_QUERY_PLAN_QUERY_PLAN_H_
 
 #include <memory>
 #include <vector>
@@ -37,15 +37,11 @@ struct IQueryPlan {
   virtual std::tuple<common::Status, size_t> read(u8 *dest, size_t size) = 0;
 };
 
-struct QueryPlanBuilder {
-  static std::tuple<common::Status, std::unique_ptr<IQueryPlan> > create(const ReshapeRequest& req);
-};
-
 struct QueryPlanExecutor {
-  void execute(const storage::ColumnStore& cstore, std::unique_ptr<qp::IQueryPlan>&& iter, qp::IStreamProcessor& qproc);
+  void execute(const storage::ColumnStore& cstore, std::unique_ptr<IQueryPlan>&& iter, IStreamProcessor& qproc);
 };
 
 }  // namespace qp
 }  // namespaces stdb
 
-#endif  // STDB_QUERY_QUERY_PLAN_H_
+#endif  // STDB_QUERY_PLAN_QUERY_PLAN_H_

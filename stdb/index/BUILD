@@ -62,6 +62,17 @@ cc_test(
 )
 
 cc_test(
+  name = "plain_series_matcher_test",
+  srcs = ["plain_series_matcher_test.cc"],
+  deps = [
+    "@gtest//:gtest",
+    "@gtest//:gtest_main",
+    ":index",
+  ],
+
+)
+
+cc_test(
   name = "rtree_test",
   srcs = ["rtree_test.cc"],
   deps = [

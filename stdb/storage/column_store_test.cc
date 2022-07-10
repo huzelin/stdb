@@ -7,41 +7,16 @@
 #include <sqlite3.h>
 
 #include "stdb/common/logging.h"
-// #include "stdb/core/metadatastorage.h"
 #include "stdb/storage/column_store.h"
-#include "stdb/query/queryplan.h"
+#include "stdb/query/plan/query_plan.h"
+#include "stdb/query/plan/query_plan_builder.h"
 
 #include "gtest/gtest.h"
 
 namespace stdb {
 namespace storage {
 
-/*
-struct Initializer {
-  Initializer() {
-    sqlite3_initialize();
-    apr_initialize();
-
-    apr_pool_t *pool = nullptr;
-    auto status = apr_pool_create(&pool, NULL);
-    if (status != APR_SUCCESS) {
-      LOG(FATAL) << "Can't create memory pool";
-    }
-    apr_dbd_init(pool);
-  }
-};
-
-static Initializer initializer;
-*/
 using namespace stdb::qp;
-
-/*
-std::unique_ptr<MetadataStorage> create_metadatastorage() {
-  // Create in-memory sqlite database.
-  std::unique_ptr<MetadataStorage> meta;
-  meta.reset(new MetadataStorage(":memory:"));
-  return meta;
-}*/
 
 std::shared_ptr<ColumnStore> create_cstore() {
   std::shared_ptr<BlockStore> bstore = BlockStoreBuilder::create_memstore();

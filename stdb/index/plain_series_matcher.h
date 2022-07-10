@@ -37,10 +37,7 @@ namespace stdb {
   * to names and names to ids. Can search index using regular
   * expressions.
   */
-struct PlainSeriesMatcher : SeriesMatcherBase {
-  //! Series name descriptor - pointer to string, length, series id.
-  // typedef std::tuple<const char*, int, i64> SeriesNameT;
-
+struct PlainSeriesMatcher : public SeriesMatcherBase {
   typedef StringTools::TableT TableT;
   typedef StringTools::InvT   InvT;
 
@@ -56,26 +53,14 @@ struct PlainSeriesMatcher : SeriesMatcherBase {
 
   PlainSeriesMatcher(i64 starting_id = STDB_STARTING_SERIES_ID);
 
-  /** Add new string to matcher.
-   */
   i64 add(const char* begin, const char* end) override;
   i64 add(const char* begin, const char* end, const Location& location) override;
 
-  /** Add value to matcher. This function should be
-   * used only to load data to matcher. Internal
-   * `series_id` counter wouldn't be affected by this call, so
-   * it should be set up propertly in constructor.
-   */
   void _add(const std::string& series, i64 id) override;
-  void _add(const std::string& series, i64 id, const Location& location) override;
+  void _add(const std::string& series, const Location& location, i64 id) override;
 
-  /** Add value to matcher. This function should be
-   * used only to load data to matcher. Internal
-   * `series_id` counter wouldn't be affected by this call, so
-   * it should be set up propertly in constructor.
-   */
   void _add(const char* begin, const char* end, i64 id) override;
-  void _add(const char* begin, const char* end, i64 id, const Location& location) override;
+  void _add(const char* begin, const char* end, const Location& location, i64 id) override;
 
   /** Match string and return it's id. If string is new return 0.
   */

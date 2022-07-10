@@ -72,7 +72,7 @@ bool ServerDatabase::init_series_id(const char* begin,
     }
   }
   *sid = id;
-  local_matcher->_add(begin, end, id, location);
+  local_matcher->_add(begin, end, location, id);
   return create_new;
 }
 

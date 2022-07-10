@@ -93,11 +93,11 @@ void SeriesMatcher::_add(const std::string& series, i64 id) {
   _add(series.data(), series.data() + series.size(), id);
 }
 
-void SeriesMatcher::_add(const std::string& series, i64 id, const Location& location) {
+void SeriesMatcher::_add(const std::string& series, const Location& location, i64 id) {
   if (series.empty()) {
     return;
   }
-  _add(series.data(), series.data() + series.size(), id, location);
+  _add(series.data(), series.data() + series.size(), location, id);
 }
 
 void SeriesMatcher::_add(const char*  begin, const char* end, i64 id) {
@@ -109,7 +109,7 @@ void SeriesMatcher::_add(const char*  begin, const char* end, i64 id) {
   inv_table[id] = sname;
 }
 
-void SeriesMatcher::_add(const char* begin, const char* end, i64 id, const Location& location) {
+void SeriesMatcher::_add(const char* begin, const char* end, const Location& location, i64 id) {
   std::lock_guard<std::mutex> guard(mutex);
   common::Status status;
   StringT sname;

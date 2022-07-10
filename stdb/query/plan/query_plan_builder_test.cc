@@ -1,4 +1,4 @@
-#include "stdb/query/queryplan.h"
+#include "stdb/query/plan/query_plan_builder.h"
 
 #include "gtest/gtest.h"
 

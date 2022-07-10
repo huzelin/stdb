@@ -40,26 +40,49 @@ struct SeriesMatcherBase {
 
   virtual ~SeriesMatcherBase() = default;
 
-  /** Add new string to matcher.
-  */
+  /** Add new string to matcher for moving obj
+   * @param begin The begin of series str
+   * @param end The end of series str
+   * @return the new id
+   */
   virtual i64 add(const char* begin, const char* end) = 0;
+
+  /** Add new string to matcher for static obj
+   * @param begin The begin of series str
+   * @param end The end of series str
+   * @param location The static location of obj
+   * @return the new id
+   */
   virtual i64 add(const char* begin, const char* end, const Location& location) = 0;
 
-  /** Add value to matcher. This function should be
-   * used only to load data to matcher. Internal
-   * `series_id` counter wouldn't be affected by this call, so
-   * it should be set up propertly in constructor.
+  /** Add value to matcher. This function should be used only to load data to matcher.
+   * @param series The moving obj's series name
+   * @param id The moving obj's id
    */
   virtual void _add(const std::string& series, i64 id) = 0;
-  virtual void _add(const std::string& series, i64 id, const Location& location) = 0;
+  
+  /** Add value to matcher. This function should be used only to load data to
+   * matcher.
+   * @param series The static obj's series name
+   * @param location The static obj's location
+   * @param id The static obj's id
+   */
+  virtual void _add(const std::string& series, const Location& location, i64 id) = 0;
 
-  /** Add value to matcher. This function should be
-   * used only to load data to matcher. Internal
-   * `series_id` counter wouldn't be affected by this call, so
-   * it should be set up propertly in constructor.
+  /** Add value to matcher. This function should be used only to load data to matcher.
+   * @param begin The begin of moving obj's series name
+   * @param end The end of moving obj's series name
+   * @param id id of moving obj
    */
   virtual void _add(const char* begin, const char* end, i64 id) = 0;
-  virtual void _add(const char* begin, const char* end, i64 id, const Location& location) = 0;
+
+  /** Add value to matcher. This function should be used only to load data to matcher.
+   * @param begin The begin of static obj's series name
+   * @param end The end of static obj's series name
+   * @param location The location of static obj
+   * @param id id of static obj
+   */
+  virtual void _add(const char* begin, const char* end, const Location& location, i64 id) = 0;
 
   /**
    * Match string and return it's id. If string is new return 0.
