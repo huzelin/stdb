@@ -10,6 +10,7 @@
 #include "stdb/common/basic.h"
 #include "stdb/core/database_session.h"
 #include "stdb/core/sync_waiter.h"
+#include "stdb/query/queryparser.h"
 #include "stdb/index/seriesparser.h"
 #include "stdb/storage/input_log.h"
 #include "stdb/storage/nbtree.h"
@@ -80,6 +81,10 @@ class Database {
   virtual storage::NBTreeAppendResult recovery_write(Sample const& sample, bool allow_duplicates) {
     return storage::NBTreeAppendResult::FAIL_BAD_VALUE;
   }
+
+  std::tuple<common::Status, std::string> parse_query(
+      boost::property_tree::ptree const& ptree,
+      qp::ReshapeRequest*                req);
 };
 
 }  // namespace stdb

@@ -18,8 +18,8 @@ struct TwoStepQueryPlan : IQueryPlan {
 
   template<class T1, class T2>
   TwoStepQueryPlan(T1&& t1, T2&& t2)
-        : prelude_(std::forward<T1>(t1))
-        , mater_(std::forward<T2>(t2)) { }
+        : prelude_(std::forward<T1>(t1)),
+        mater_(std::forward<T2>(t2)) { }
 
   boost::property_tree::ptree debug_info() const override {
     boost::property_tree::ptree tree;

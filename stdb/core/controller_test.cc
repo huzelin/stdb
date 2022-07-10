@@ -21,7 +21,7 @@ static std::string make_select_meta_query() {
 
 static std::string make_scan_query(Timestamp begin, Timestamp end, qp::OrderBy order) {
   std::stringstream str;
-  str << "{ \"select\": \"test1\", \"range\": { \"from\": " << "\"" << DateTimeUtil::to_iso_string(begin) << "\"";
+  str << "{ \"select\": \"cpu\", \"range\": { \"from\": " << "\"" << DateTimeUtil::to_iso_string(begin) << "\"";
   str << ", \"to\": " << "\"" << DateTimeUtil::to_iso_string(end) << "\"" << "},";
   str << "  \"order-by\": " << (order == qp::OrderBy::SERIES ? "\"series\"," : "\"time\",");
   str << "  \"where\": " << "[ { \"ip\" : \"127.0.0.1\" } ]";
@@ -54,23 +54,26 @@ TEST(TestController, Test2) {
     auto status = session->init_series_id(series.c_str(), series.c_str() + series.size(), &id);
     LOG(INFO) << "sample.paramid=" << id;
 
-    for (auto i = 0; i < 512; ++i) {
+    for (auto i = 0; i < 18; ++i) {
       Sample sample;
       sample.paramid = id;
       sample.payload.float64 = 120.0 + i * 0.001;
-      sample.timestamp = (20120010 + i) * 1000;
+      sample.payload.type = PAYLOAD_FLOAT; 
+      sample.timestamp = (20120010UL + i) * 1000;
 
       session->write(sample);
     }
 
     ConcurrentCursor concurrent_cursor;
-    // std::string query_json = make_scan_query(20120010000ul + 10 * 1000, 20120010000ul + 11 * 1000, qp::OrderBy::TIME);
-    std::string query_json = make_select_meta_query();
+    std::string query_json = make_scan_query(20120010000ul + 10 * 1000, 20120010000ul + 11 * 1000, qp::OrderBy::TIME);
+    // std::string query_json = make_select_meta_query();
     session->query(&concurrent_cursor, query_json.c_str());
 
     char buf[1024];
     auto rdsize = concurrent_cursor.read(buf, 1024);
     LOG(INFO) << "rdsize=" << rdsize;
+    Sample *sample = (Sample*)(buf);
+    LOG(INFO) << "paramid=" << sample->paramid << " payload=" << sample->payload.size << " sizeof(Sample)=" << sizeof(Sample);
   }
   controller->close();
 }

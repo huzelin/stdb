@@ -64,4 +64,68 @@ storage::InputLog* Database::get_input_log() {
   return nullptr;
 }
 
+std::tuple<common::Status, std::string> Database::parse_query(
+    boost::property_tree::ptree const& ptree,
+    qp::ReshapeRequest*                req) {
+  using namespace qp;
+
+  QueryKind kind;
+  common::Status status;
+
+  ErrorMsg error_msg;
+  std::tie(status, kind, error_msg) = QueryParser::get_query_kind(ptree);
+  if (status != common::Status::Ok()) {
+    return std::make_tuple(status, error_msg.data());
+  }
+  auto global_matcher = this->global_matcher(); 
+  switch (kind) {
+    case QueryKind::SELECT_META:
+      LOG(ERROR) << "Metadata query is not supported";
+      return std::make_tuple(common::Status::BadArg(), "Metadata query is not supported");
+
+    case QueryKind::SELECT_EVENTS:
+      std::tie(status, *req, error_msg) = QueryParser::parse_select_events_query(ptree, *global_matcher);
+      if (status != common::Status::Ok()) {
+        return std::make_tuple(status, error_msg.data());
+      }
+      break;
+
+    case QueryKind::AGGREGATE:
+      std::tie(status, *req, error_msg) = QueryParser::parse_aggregate_query(ptree, *global_matcher);
+      if (status != common::Status::Ok()) {
+        return std::make_tuple(status, error_msg.data());
+      }
+      break;
+
+    case QueryKind::GROUP_AGGREGATE:
+      std::tie(status, *req, error_msg) = QueryParser::parse_group_aggregate_query(ptree, *global_matcher);
+      if (status != common::Status::Ok()) {
+        return std::make_tuple(status, error_msg.data());
+      }
+      break;
+
+    case QueryKind::GROUP_AGGREGATE_JOIN:
+      std::tie(status, *req, error_msg) = QueryParser::parse_group_aggregate_join_query(ptree, *global_matcher);
+      if (status != common::Status::Ok()) {
+        return std::make_tuple(status, error_msg.data());
+      }
+      break;
+
+    case QueryKind::SELECT:
+      std::tie(status, *req, error_msg) = QueryParser::parse_select_query(ptree, *global_matcher);
+      if (status != common::Status::Ok()) {
+        return std::make_tuple(status, error_msg.data());
+      }
+      break;
+
+    case QueryKind::JOIN:
+      std::tie(status, *req, error_msg) = QueryParser::parse_join_query(ptree, *global_matcher);
+      if (status != common::Status::Ok()) {
+        return std::make_tuple(status, error_msg.data());
+      }
+      break;
+  };
+  return std::make_tuple(common::Status::Ok(), ErrorMsg());
+}
+
 }  // namespace stdb

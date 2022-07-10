@@ -157,6 +157,7 @@ common::Status StandaloneDatabaseSession::write(const Sample& sample) {
       ilog_->rotate();
     }
   }
+  return common::Status::Ok();
 }
 
 void StandaloneDatabaseSession::query(InternalCursor* cursor, const char* query) {

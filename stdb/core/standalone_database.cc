@@ -8,6 +8,7 @@
 #include "stdb/core/controller.h"
 #include "stdb/core/standalone_database_session.h"
 #include "stdb/query/queryparser.h"
+#include "stdb/query/plan/query_plan_builder.h"
 #include "stdb/query/queryprocessor.h"
 
 namespace stdb {
@@ -98,8 +99,6 @@ void StandaloneDatabase::query(StandaloneDatabaseSession* session, InternalCurso
       proc->stop();
     }
   } else {
-    LOG(INFO) << "------SELECT";
-    /*
     std::tie(status, error_msg) = parse_query(ptree, &req);
     if (status != common::Status::Ok()) {
       cur->set_error(status, error_msg.data());
@@ -113,11 +112,11 @@ void StandaloneDatabase::query(StandaloneDatabaseSession* session, InternalCurso
     }
     bool groupbytime = kind == QueryKind::GROUP_AGGREGATE;
     proc = std::make_shared<ScanQueryProcessor>(nodes, groupbytime);
-    if (req.select.matcher) {
-      session->set_series_matcher(req.select.matcher);
-    } else {
-      session->clear_series_matcher();
-    }
+    // if (req.select.matcher) {
+    //  session->set_series_matcher(req.select.matcher);
+    // } else {
+    //  session->clear_series_matcher();
+    // }
     // Return error if no series was found
     if (req.select.columns.empty()) {
       cur->set_error(common::Status::QueryParsingError());
@@ -136,10 +135,10 @@ void StandaloneDatabase::query(StandaloneDatabaseSession* session, InternalCurso
     // TODO: log query plan if required
     if (proc->start()) {
       QueryPlanExecutor executor;
-      executor.execute(*cstore_, std::move(query_plan), *proc);
+      auto cstore = worker_database_->cstore();
+      executor.execute(*cstore, std::move(query_plan), *proc);
       proc->stop();
     }
-    */
   }
 }
 

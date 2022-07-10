@@ -260,6 +260,7 @@ struct NBTreeLeafIterator : RealValuedOperator {
       return;
     }
     status_ = node.read_all(&tsbuf_, &xsbuf_);
+
     if (status_.IsOk()) {
       if (begin_ < end_) {
         // FWD direction
@@ -583,7 +584,7 @@ struct NBTreeSBlockIteratorBase : SeriesOperator<TVal> {
         if ((status.Code() == common::Status::kNotFound) || (status.Code() == common::Status::kUnavailable)) {
           // Subtree exists but doesn't contains values from begin-end timerange or
           // entire subtree was deleted
-          LOG(INFO) << "Can't open next iterator because " << status.ToString();
+          DLOG(INFO) << "Can't open next iterator because " << status.ToString();
           continue;
         } else if (!status.IsOk()) {
           // We're out of iterators and should stop.

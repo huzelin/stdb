@@ -24,6 +24,15 @@ struct ScanProcessingStep : ProcessingPrelude {
   boost::property_tree::ptree debug_info() const override {
     boost::property_tree::ptree tree;
     tree.add("name", "ScanProcessingStep");
+    boost::property_tree::ptree array;
+    for (auto id : ids_) {
+      boost::property_tree::ptree elem;
+      elem.add("id", id);
+      array.push_back(boost::property_tree::ptree::value_type("", elem));
+    }
+    tree.add_child("ids", array);
+    tree.add("begin", std::to_string(begin_));
+    tree.add("end", std::to_string(end_));
     return tree;
   }
 
