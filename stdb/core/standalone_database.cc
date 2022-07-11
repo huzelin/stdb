@@ -65,7 +65,8 @@ void StandaloneDatabase::query(StandaloneDatabaseSession* session, InternalCurso
   boost::property_tree::ptree ptree;
   common::Status status;
   ErrorMsg error_msg;
-  // session->clear_series_matcher();
+  session->clear_matcher_substitute();
+
   std::tie(status, ptree, error_msg) = QueryParser::parse_json(query);
   if (status != common::Status::Ok()) {
     cur->set_error(status, error_msg.data());
@@ -112,11 +113,11 @@ void StandaloneDatabase::query(StandaloneDatabaseSession* session, InternalCurso
     }
     bool groupbytime = kind == QueryKind::GROUP_AGGREGATE;
     proc = std::make_shared<ScanQueryProcessor>(nodes, groupbytime);
-    // if (req.select.matcher) {
-    //  session->set_series_matcher(req.select.matcher);
-    // } else {
-    //  session->clear_series_matcher();
-    // }
+    if (req.select.matcher) {
+      session->set_matcher_substitute(req.select.matcher);
+    } else {
+      session->clear_matcher_substitute();
+    }
     // Return error if no series was found
     if (req.select.columns.empty()) {
       cur->set_error(common::Status::QueryParsingError());

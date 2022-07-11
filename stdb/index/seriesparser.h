@@ -64,7 +64,7 @@ struct SeriesParser {
 };
 
 enum class GroupByOpType {
-  PIVOT,
+  INVERT,
   GROUP,
 };
 

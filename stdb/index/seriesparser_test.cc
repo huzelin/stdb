@@ -180,5 +180,34 @@ TEST(SeriesParser, Test_seriesparser_9) {
   EXPECT_STREQ("\\ host\\ name=foo\\bar\\", keystr.c_str());
 }
 
+TEST(SeriesParser, Test_group_by_tag_1) {
+  SeriesMatcher series_matcher;
+  const char* series1 = "cpu.sys.max loc=beijing";
+  series_matcher.add(series1, series1 + strlen(series1));
+
+  const char* series2 = "cpu.sys.max loc=shanghai";
+  series_matcher.add(series2, series2 + strlen(series2));
+
+  const char* series3 = "cpu.sys.min loc=beijing";
+  series_matcher.add(series3, series3 + strlen(series3));
+
+  const char* series4 = "cpu.sys.max loc=shanghai location=shanghai";
+  series_matcher.add(series4, series4 + strlen(series4));
+
+  const char* series5 = "cpu.sys.max loc=shanghai location=tianjin color=red";
+  series_matcher.add(series5, series5 + strlen(series5));
+
+  std::vector<std::string> tags;
+  tags.push_back("loc");
+  GroupByOpType op = GroupByOpType::INVERT;
+  // GroupByOpType op = GroupByOpType::GROUP;
+ 
+  GroupByTag group_by_tag(series_matcher, "cpu.sys.max", tags, op);
+  auto mapping = group_by_tag.get_mapping();
+  for (auto& item : mapping) {
+    LOG(INFO) << "item:" << item.first << " " << item.second;
+  }
+}
+
 }  // namespace stdb
 

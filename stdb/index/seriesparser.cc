@@ -259,7 +259,7 @@ std::tuple<common::Status, SeriesParser::StringT> SeriesParser::filter_tags(
   if (ix_tag == 0) {
     // User should specify at least one tag
     return std::make_tuple(common::Status::BadData(), NO_RESULT);
-  }
+  } 
 
   return std::make_tuple(common::Status::Ok(), std::make_pair(out_begin, it_out - out_begin));
 }
@@ -268,16 +268,16 @@ GroupByTag::GroupByTag(
     const SeriesMatcher &matcher,
     std::string metric,
     std::vector<std::string> const& tags,
-    GroupByOpType op)
-   : matcher_(matcher)
-    , offset_{}
-    , prev_size_(0)
-    , metrics_({metric})
-    , funcs_()
-    , tags_(tags)
-    , local_matcher_(1ul)
-    , snames_(StringTools::create_set(64))
-    , type_(op) {
+    GroupByOpType op) :
+    matcher_(matcher),
+    offset_{},
+    prev_size_(0),
+    metrics_({metric}),
+    funcs_(),
+    tags_(tags),
+    local_matcher_(1ul),
+    snames_(StringTools::create_set(64)),
+    type_(op) {
   refresh_();
 }
 
@@ -285,16 +285,16 @@ GroupByTag::GroupByTag(const SeriesMatcher &matcher,
                        const std::vector<std::string>& metrics,
                        const std::vector<std::string> &func_names,
                        std::vector<std::string> const& tags,
-                       GroupByOpType op)
-    : matcher_(matcher)
-    , offset_{}
-    , prev_size_(0)
-    , metrics_(metrics)
-    , funcs_(func_names)
-    , tags_(tags)
-    , local_matcher_(1ul)
-    , snames_(StringTools::create_set(64))
-    , type_(op) {
+                       GroupByOpType op) :
+    matcher_(matcher),
+    offset_{},
+    prev_size_(0),
+    metrics_(metrics),
+    funcs_(func_names),
+    tags_(tags),
+    local_matcher_(1ul),
+    snames_(StringTools::create_set(64)),
+    type_(op) {
   refresh_();
 }
 
@@ -320,7 +320,7 @@ void GroupByTag::refresh_() {
       common::Status status;
       SeriesParser::StringT result, stritem;
       stritem = std::make_pair(std::get<0>(item), std::get<1>(item));
-      std::tie(status, result) = SeriesParser::filter_tags(stritem, filter, buffer, type_ == GroupByOpType::GROUP);
+      std::tie(status, result) = SeriesParser::filter_tags(stritem, filter, buffer, type_ == GroupByOpType::INVERT);
       if (status.IsOk()) {
         if (funcs_.size() != 0) {
           // Update metric name using aggregate function, e.g. cpu key=val -> cpu:max key=val

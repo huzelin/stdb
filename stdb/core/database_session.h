@@ -6,6 +6,7 @@
 
 #include "stdb/common/basic.h"
 
+#include "stdb/index/seriesparser.h"
 #include "stdb/query/internal_cursor.h"
 
 namespace stdb {
@@ -75,6 +76,24 @@ class DatabaseSession {
    * @param query is a string that contains query
    */
   virtual void search(InternalCursor* cursor, const char* query) = 0;
+
+  /**
+   * @brief set matcher substitute
+   * @param matcher_substitute matcher substitute
+   */
+  void set_matcher_substitute(std::shared_ptr<PlainSeriesMatcher> matcher_substitute) {
+    matcher_substitute_ = matcher_substitute;
+  }
+
+  /**
+   * @brief clear matcher substitute.
+   */
+  void clear_matcher_substitute() {
+    matcher_substitute_ = nullptr;
+  }
+
+ protected:
+  mutable std::shared_ptr<PlainSeriesMatcher> matcher_substitute_;
 };
 
 }  // namespace stdb

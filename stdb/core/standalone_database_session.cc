@@ -87,10 +87,20 @@ common::Status StandaloneDatabaseSession::init_series_id(const char* begin, cons
 }
 
 int StandaloneDatabaseSession::get_series_name(ParamId id, char* buffer, size_t buffer_size) {
-  auto name = local_matcher_.id2str(id);
-  if (name.first == nullptr) {
-    auto server_database = database_->server_database();
-    return server_database->get_series_name(id, buffer, buffer_size, &local_matcher_);
+  StringT name;
+  if (matcher_substitute_) {
+    // Use temporary matcher
+    name = matcher_substitute_->id2str(id);
+    if (name.first == nullptr) {
+      // no such id, user error
+      return 0;
+    }
+  } else {
+    name = local_matcher_.id2str(id);
+    if (name.first == nullptr) {
+      auto server_database = database_->server_database();
+      return server_database->get_series_name(id, buffer, buffer_size, &local_matcher_);
+    }
   }
   memcpy(buffer, name.first, static_cast<size_t>(name.second));
   return static_cast<int>(name.second);

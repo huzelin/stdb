@@ -575,24 +575,22 @@ static std::tuple<common::Status, OrderBy, ErrorMsg> parse_orderby(boost::proper
   return std::make_tuple(common::Status::Ok(), OrderBy::TIME, ErrorMsg());
 }
 
-/** Parse `group-by` statement, format:
- *  { ..., "group-by": [ "tag1", "tag2" ] }
- *  or
- *  { ..., "group-by": "tag1" }
+/** Parse `group-by-tag` statement, format:
+ *  { ..., "group-by-tag": [ "tag1", "tag2" ] }
+ * or { ..., "invert-group-by-tag" : [ "tag1", "tag2" ] }
  */
-static std::tuple<common::Status, std::vector<std::string>, GroupByOpType, ErrorMsg> parse_groupby(boost::property_tree::ptree const& ptree) {
-  std::vector<std::string> tags;
-  GroupByOpType op = GroupByOpType::PIVOT;
-  auto groupby = ptree.get_child_optional("group-by");
+static std::tuple<common::Status, std::vector<std::string>, GroupByOpType, ErrorMsg>
+parse_groupby(boost::property_tree::ptree const& ptree) {
+  std::vector<std::string> tags; 
+  GroupByOpType op = GroupByOpType::GROUP;
+  auto groupby = ptree.get_child_optional("group-by-tag");
   if (groupby) {
-    LOG(ERROR) << "'group-by' field is depricated, consider using 'group-by-tag' or 'pivot-by-tag'";
-  }
-  if (!groupby) {
-    groupby = ptree.get_child_optional("pivot-by-tag");
-  }
-  if (!groupby) {
-    groupby = ptree.get_child_optional("group-by-tag");
     op = GroupByOpType::GROUP;
+  } else {
+    groupby = ptree.get_child_optional("invert-group-by-tag");
+    if (groupby) {
+      op = GroupByOpType::INVERT;
+    }
   }
   if (groupby) {
     for (auto item: *groupby) {
