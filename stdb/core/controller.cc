@@ -33,7 +33,9 @@ void Controller::start_sync_worker_loop() {
 void Controller::sync_action() {
   std::vector<std::shared_ptr<Database>> all_databases = get_alldatabases();
   for (auto database : all_databases) {
-    database->sync();
+    if (database) {
+      database->sync();
+    }
   }
   sync_waiter_->notify_all();
 }
@@ -70,6 +72,15 @@ std::shared_ptr<Database> Controller::open_standalone_database(const char* dbnam
   return new_db;
 }
 
+void Controller::close_database(const char* dbname) {
+  std::lock_guard<std::mutex> lck(mutex_);
+  auto database = get_database(dbname);
+  if (database) {
+    database->close();
+    unregister_database(dbname);
+  }
+}
+
 common::Status Controller::new_standalone_database(
     bool ismoving,
     const char* base_file_name,
@@ -95,7 +106,9 @@ void Controller::close() {
 
   std::vector<std::shared_ptr<Database>> all_databases = get_alldatabases();
   for (auto database : all_databases) {
-    database->close();
+    if (database) {
+      database->close();
+    }
   }
 }
 
@@ -108,6 +121,14 @@ common::Status Controller::register_database(const std::string& db_name, std::sh
   name2index_[db_name] = database_.size();
   database_.emplace_back(database);
   return common::Status::Ok();
+}
+
+void Controller::unregister_database(const std::string& db_name) {
+  auto iter = name2index_.find(db_name);
+  if (iter != name2index_.end()) {
+    database_[iter->second] = std::shared_ptr<Database>();
+  }
+  name2index_.erase(db_name);
 }
 
 std::shared_ptr<Database> Controller::get_database(const std::string& db_name) {

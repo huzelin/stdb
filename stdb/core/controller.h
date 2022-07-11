@@ -28,6 +28,7 @@ class Controller : public common::Singleton<Controller> {
   Role role() const { return role_; }
 
   std::shared_ptr<Database> open_standalone_database(const char* dbname);
+  void close_database(const char* dbname);
   common::Status new_standalone_database(
       bool ismoving,
       const char* dbname,
@@ -36,6 +37,7 @@ class Controller : public common::Singleton<Controller> {
       i32 num_volumes,
       u64 volume_size,
       bool allocate);
+  
   void close();
 
  protected:
@@ -46,6 +48,7 @@ class Controller : public common::Singleton<Controller> {
   std::shared_ptr<SyncWaiter> sync_waiter() { return sync_waiter_; }
 
   common::Status register_database(const std::string& db_name, std::shared_ptr<Database> database);
+  void unregister_database(const std::string& db_name);
   std::shared_ptr<Database> get_database(const std::string& db_name);
 
   void start_sync_worker();

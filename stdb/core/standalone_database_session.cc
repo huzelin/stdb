@@ -37,6 +37,9 @@ void StandaloneDatabaseSession::init_ilog() {
 }
 
 common::Status StandaloneDatabaseSession::init_series_id(const char* begin, const char* end, const Location& location, u64* id) {
+  if (database_->is_moving()) {
+    return common::Status::BadArg();
+  }
   const char* ksbegin = nullptr;
   const char* ksend = nullptr;
   char buf[LIMITS_MAX_SNAME];
@@ -53,7 +56,7 @@ common::Status StandaloneDatabaseSession::init_series_id(const char* begin, cons
   init_ilog();
 
   auto server_database = database_->server_database();
-  auto create_new = server_database->init_series_id(begin, end, location, id, &local_matcher_, ilog_, sync_waiter_.get());
+  auto create_new = server_database->init_series_id(ob, ksend, location, id, &local_matcher_, ilog_, sync_waiter_.get());
   if (create_new) {
     auto worker_database = database_->worker_database();
     status = worker_database->cstore()->create_new_column(*id);
@@ -62,6 +65,9 @@ common::Status StandaloneDatabaseSession::init_series_id(const char* begin, cons
 }
 
 common::Status StandaloneDatabaseSession::init_series_id(const char* begin, const char* end, u64* id) {
+  if (!database_->is_moving()) {
+    return common::Status::BadArg();
+  }
   const char* ksbegin = nullptr;
   const char* ksend = nullptr;
   char buf[LIMITS_MAX_SNAME];
@@ -78,7 +84,7 @@ common::Status StandaloneDatabaseSession::init_series_id(const char* begin, cons
   init_ilog();
 
   auto server_database = database_->server_database();
-  auto create_new = server_database->init_series_id(begin, end, id, &local_matcher_, ilog_, sync_waiter_.get());
+  auto create_new = server_database->init_series_id(ob, ksend, id, &local_matcher_, ilog_, sync_waiter_.get());
   if (create_new) {
     auto worker_database = database_->worker_database();
     status = worker_database->cstore()->create_new_column(*id);
@@ -121,6 +127,7 @@ common::Status StandaloneDatabaseSession::write(const Sample& sample) {
     case storage::NBTreeAppendResult::OK:
       break;
     case storage::NBTreeAppendResult::OK_FLUSH_NEEDED: {
+      LOG(INFO) << "-----------------------------need flush....";
       if (ilog_) {
         auto rpoints_copy = rpoints;
         worker_database->update_rescue_point(sample.paramid, std::move(rpoints_copy));

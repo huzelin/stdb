@@ -3530,7 +3530,7 @@ void NBTreeExtentsList::debug_print(LogicAddr root, std::shared_ptr<BlockStore> 
       std::cout << pad << "ERROR: Can't decompress block at " << root << " " << status.ToString() << std::endl;
     }
     std::cout << pad << "Leaf at " << root << " TS: [" << ts.front() << ", " << ts.back() << "]" << std::endl;
-    std::cout << pad << "        " << root << " XS: [" << ts.front() << ", " << ts.back() << "]" << std::endl;
+    std::cout << pad << "        " << root << " XS: [" << xs.front() << ", " << xs.back() << "]" << std::endl;
   } else {
     IOVecSuperblock inner(root, bstore);
     std::vector<SubtreeRef> refs;

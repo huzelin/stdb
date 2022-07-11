@@ -29,15 +29,6 @@ namespace stdb {
 ServerMetaStorage::ServerMetaStorage(const char* db, bool is_moving)
     : MetaStorage(db), is_moving_(is_moving) {
   create_server_tables();
-
-  /*
-  // Create prepared statement
-  const char* query = "INSERT INTO stdb_series (series_id, keyslist, storage_id, lon, lat) VALUES (%s, %s, %d, %f, %f)";
-  auto status = apr_dbd_prepare(driver_, pool_.get(), handle_.get(), query, "INSERT_SERIES_NAME", &insert_);
-  if (status != 0) {
-    LOG(ERROR) << "Error creating prepared statement";
-    LOG(FATAL) << apr_dbd_error(driver_, handle_.get(), status);
-  }*/
 }
 
 void ServerMetaStorage::create_server_tables() {

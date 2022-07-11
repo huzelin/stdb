@@ -244,7 +244,7 @@ void WorkerDatabase::run_recovery(
 
   common::Status restore_status;
   std::vector<ParamId> restored_ids;
-  std::tie(restore_status, restored_ids) = cstore_->open_or_restore(mapping, params.input_log_path == nullptr);
+  std::tie(restore_status, restored_ids) = cstore_->open_or_restore(mapping, /*params.input_log_path == nullptr*/ true);
   if (run_wal_recovery) {
     auto ilog = std::make_shared<storage::ShardedInputLog>(ccr, params.input_log_path);
     run_input_log_recovery(ilog.get(), restored_ids, &mapping, database);
